@@ -25,8 +25,9 @@ Access at http://localhost:{web_port} (configured in config.json)
 - **server.py** - Python WebSocket server using aiohttp
   - Reads configuration from config.json
   - Auto-scans for ADS-B receivers or connects to configured IPs
-  - Parses SBS/BaseStation format messages from receivers
-  - Broadcasts flight data to connected WebSocket clients every 1 second
+  - Parses SBS/BaseStation format messages from receivers (port 30003)
+  - Polls dump1090 JSON API (`/dump1090/data/aircraft.json`) every 5s for ADS-B emitter categories
+  - Broadcasts flight data (including emitter category) to WebSocket clients every 1 second
   - Cleans up flights not seen in 60 seconds
   - Serves static files, admin panel, setup wizard, and APIs
   - Authentication via bcrypt password hashing and session cookies
@@ -58,13 +59,42 @@ All PNG sprites face right (eastward) and are flipped in-canvas for westbound ai
 
 ### Aircraft Type Detection Logic
 
-Priority order in categorization:
-1. **Helicopter**: altitude < 5000 ft AND speed < 150 knots
-2. **Heavy (747/A380)**: specific callsigns OR altitude > 42000 ft OR speed > 550 knots
-3. **Wide Body**: altitude > 40000 ft OR speed > 500 knots
-4. **Regional Jet**: specific callsigns OR (altitude < 25000 ft AND speed < 350 knots)
-5. **Small Prop**: N-prefix callsigns OR (altitude < 10000 ft AND speed < 200 knots)
-6. **Narrow Body**: default for remaining aircraft
+Two-tier system: real ADS-B emitter categories when available, heuristic fallback otherwise.
+
+#### Tier 1: ADS-B Emitter Category (from dump1090 JSON API)
+
+The server polls `http://{receiver_ip}/dump1090/data/aircraft.json` every 5 seconds. The SBS/BaseStation protocol (port 30003) does **not** include emitter category, but the dump1090/readsb JSON API exposes the raw ADS-B transponder category field. When available, this is authoritative and always preferred over heuristics.
+
+Mapping from DO-260B emitter categories to sprite types:
+| ADS-B Category | Description | Sprite |
+|---|---|---|
+| A1 | Light (< 15,500 lbs) | smallProp |
+| A2 | Small (15,500 - 75,000 lbs) | regionalJet |
+| A3 | Large (75,000 - 300,000 lbs) | narrowBody |
+| A4 | High vortex large (B757) | narrowBody |
+| A5 | Heavy (> 300,000 lbs) | wideBody or heavy (by altitude/speed) |
+| A6 | High performance (> 5g, > 400 kts) | narrowBody |
+| A7 | Rotorcraft | helicopter |
+| B1 | Glider / sailplane | smallProp |
+| B2 | Lighter-than-air | smallProp |
+| B4 | Skydiver drop plane | smallProp |
+| B6 | UAV | smallProp |
+
+Once an emitter category is received for an aircraft, it is locked in and heuristic re-evaluation is skipped.
+
+#### Tier 2: Heuristic Fallback (when no emitter category available)
+
+Priority order when ADS-B category is not available (some transponders don't broadcast it):
+1. **Helicopter callsigns**: known operator prefixes (LFE, MED, CHP, PHI, ERA, BHS) or keywords (LIFE, MERCY, COPTER, etc.)
+2. **Heavy/Wide body callsigns**: major airline ICAO prefixes (CPA, UAE, ETH, QTR, SIA, AAL, DAL, UAL, FDX, UPS, etc.) + altitude/speed thresholds
+3. **Altitude/speed extremes**: altitude > 42000 ft or speed > 550 kts = heavy; > 40000 ft or > 500 kts = wideBody
+4. **N-number (US GA registration)**: pattern `N` + digit + 2-4 alphanumerics = smallProp (or narrowBody if above 25000 ft)
+5. **Regional airline callsigns**: SKW, RPA, ASH, PDT, CHQ, ENY, JIA, CPZ
+6. **Speed/altitude heuristics**: speed < 60 + alt < 5000 = helicopter; alt < 18000 + speed < 300 = smallProp or regionalJet
+7. **Altitude-only**: < 10000 ft = smallProp, < 25000 ft = regionalJet, higher = narrowBody
+8. **Default**: narrowBody (re-evaluated when better data arrives)
+
+Important: `speed=0` or `altitude=0` means data not yet received, not actual zero. The system re-categorizes when better data arrives (speed > 0 and callsign present).
 
 ### View Direction Controls
 
@@ -77,7 +107,8 @@ The viewer can rotate between cardinal directions (N/E/S/W), showing aircraft in
 ### External APIs
 
 - **Open-Meteo**: Weather and sunrise/sunset data (updates every 10 minutes)
-- **ADS-B Receivers**: SBS/BaseStation protocol on port 30003
+- **ADS-B Receivers**: SBS/BaseStation protocol on port 30003 (flight data)
+- **dump1090 JSON API**: `http://{receiver}/dump1090/data/aircraft.json` on port 80 (emitter categories, polled every 5s)
 
 ## Dependencies
 

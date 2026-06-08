@@ -12,7 +12,7 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Dict, Set, List
-from aiohttp import web
+from aiohttp import web, ClientSession, ClientTimeout
 import netifaces
 import bcrypt
 
@@ -166,6 +166,7 @@ flights: Dict[str, dict] = {}
 connected_clients: Set = set()
 receivers: List[str] = []
 receiver_tasks: List[asyncio.Task] = []
+emitter_categories: Dict[str, str] = {}  # ICAO hex -> ADS-B emitter category (A1, A3, A7, etc.)
 
 
 @dataclass
@@ -268,6 +269,7 @@ async def connect_to_receiver(host: str, port: int = 30003):
                             'vrate': 0,
                             'squawk': '',
                             'ground': False,
+                            'category': emitter_categories.get(msg.icao.upper(), ''),
                             'last_seen': time.time()
                         }
 
@@ -343,6 +345,52 @@ async def test_port(ip: str, port: int, timeout: float = 0.5):
         return True
     except:
         return False
+
+
+async def poll_aircraft_json():
+    """Poll dump1090/readsb JSON API to get ADS-B emitter categories.
+
+    The SBS/BaseStation protocol (port 30003) doesn't include emitter category,
+    but the dump1090 JSON API exposes the raw ADS-B category field (A1=Light,
+    A2=Small, A3=Large, A5=Heavy, A7=Rotorcraft, etc.). This task periodically
+    fetches that data and merges it into the flights dict.
+    """
+    # Wait for receivers to be determined before starting
+    await asyncio.sleep(5)
+
+    json_api_urls = []
+    for receiver_ip in receivers:
+        json_api_urls.append(f"http://{receiver_ip}/dump1090/data/aircraft.json")
+
+    if not json_api_urls:
+        print("No receivers for JSON API polling")
+        return
+
+    timeout = ClientTimeout(total=5)
+    print(f"Starting JSON API polling for emitter categories: {json_api_urls}")
+
+    async with ClientSession(timeout=timeout) as session:
+        while True:
+            for url in json_api_urls:
+                try:
+                    async with session.get(url) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            aircraft_list = data.get("aircraft", [])
+                            count = 0
+                            for ac in aircraft_list:
+                                hex_code = ac.get("hex", "").strip().upper()
+                                cat = ac.get("category", "")
+                                if hex_code and cat:
+                                    emitter_categories[hex_code] = cat
+                                    # Merge into active flight if present
+                                    if hex_code in flights:
+                                        flights[hex_code]["category"] = cat
+                                    count += 1
+                except Exception:
+                    pass  # JSON API not available on this receiver, use heuristics
+
+            await asyncio.sleep(5)
 
 
 async def cleanup_old_flights():
@@ -863,6 +911,7 @@ async def main():
         start_http_server(),
         cleanup_old_flights(),
         broadcast_flights(),
+        poll_aircraft_json(),
     ]
 
     # Connect to all receivers

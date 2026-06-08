@@ -749,9 +749,18 @@ class ADSBit {
         flights.forEach(flight => {
             if (flight.lat && flight.lon && flight.altitude) {
                 this.flights.set(flight.icao, flight);
-                // Categorize aircraft type - re-evaluate when speed data arrives
-                // since early messages often lack speed, leading to wrong guesses
-                if (!this.aircraftTypes.has(flight.icao) || (flight.speed > 0 && flight.callsign)) {
+                // Use ADS-B emitter category if available (from dump1090 JSON API),
+                // otherwise fall back to heuristics. Re-evaluate when new data arrives.
+                const hasEmitterCat = flight.category && flight.category.length >= 2;
+                const cached = this.aircraftTypes.get(flight.icao);
+                if (hasEmitterCat && (!cached || !cached.fromEmitter)) {
+                    // Real ADS-B emitter category arrived - always prefer it
+                    this.categorizeFromEmitter(flight);
+                } else if (!cached) {
+                    // No data yet - use heuristics
+                    this.categorizeAircraft(flight);
+                } else if (!cached.fromEmitter && (flight.speed > 0 && flight.callsign)) {
+                    // Better heuristic data arrived, re-evaluate
                     this.categorizeAircraft(flight);
                 }
             }
@@ -759,15 +768,42 @@ class ADSBit {
         // Aircraft count is now updated in drawAircraft() with visible/total format
     }
 
+    categorizeFromEmitter(flight) {
+        // Map ADS-B emitter category to sprite type
+        // See DO-260B Table 2-75 for full list
+        const cat = flight.category;
+        let type = 'narrowBody';
+
+        switch (cat) {
+            case 'A1': type = 'smallProp'; break;     // Light (< 15,500 lbs)
+            case 'A2': type = 'regionalJet'; break;    // Small (15,500 - 75,000 lbs)
+            case 'A3': type = 'narrowBody'; break;     // Large (75,000 - 300,000 lbs)
+            case 'A4': type = 'narrowBody'; break;     // High vortex large (B757)
+            case 'A5':                                  // Heavy (> 300,000 lbs)
+                // Distinguish wideBody vs heavy sprite by altitude/speed
+                type = ((flight.altitude > 42000) || (flight.speed > 550)) ? 'heavy' : 'wideBody';
+                break;
+            case 'A6': type = 'narrowBody'; break;     // High performance (> 5g, > 400 kts)
+            case 'A7': type = 'helicopter'; break;     // Rotorcraft
+            case 'B1': type = 'smallProp'; break;      // Glider / sailplane
+            case 'B2': type = 'smallProp'; break;      // Lighter-than-air
+            case 'B4': type = 'smallProp'; break;      // Skydiver drop plane
+            case 'B6': type = 'smallProp'; break;      // UAV
+            default:   type = 'narrowBody'; break;     // Unknown or surface vehicles
+        }
+
+        this.aircraftTypes.set(flight.icao, { type, fromEmitter: true });
+    }
+
     categorizeAircraft(flight) {
-        // Categorize aircraft based on available data
+        // Heuristic fallback when ADS-B emitter category is not available.
         // Priority: 1. Callsign-based, 2. Altitude/Speed heuristics, 3. Default
         //
         // NOTE: speed=0 or altitude=0 means data not yet received, so we
         // avoid making assumptions from missing data.  The caller should
         // re-categorize once better data arrives.
 
-        let category = 'narrowBody'; // Default
+        let type = 'narrowBody'; // Default
 
         const callsign = (flight.callsign || '').trim();
         const altitude = flight.altitude || 0;
@@ -793,67 +829,56 @@ class ADSBit {
 
         // --- Apply rules ---
 
-        // 1. Helicopter: callsign match + reasonable flight envelope
+        // 1. Helicopter: callsign match
         if (isHeliCallsign) {
-            category = 'helicopter';
+            type = 'helicopter';
         }
         // 2. Heavy / Wide body
         else if (heavyCallsigns.includes(airline)) {
-            category = (hasAlt && altitude > 42000) || (hasSpeed && speed > 550) ? 'heavy' : 'wideBody';
+            type = (hasAlt && altitude > 42000) || (hasSpeed && speed > 550) ? 'heavy' : 'wideBody';
         }
         else if ((hasAlt && altitude > 42000) || (hasSpeed && speed > 550)) {
-            category = 'heavy';
+            type = 'heavy';
         }
         else if ((hasAlt && altitude > 40000) || (hasSpeed && speed > 500)) {
-            category = 'wideBody';
+            type = 'wideBody';
         }
         // 3. N-number = general aviation (small prop unless data says otherwise)
         else if (isNNumber) {
-            // N-numbers at high altitude/speed are likely turboprops or light jets
-            if (hasAlt && altitude > 25000) {
-                category = 'narrowBody';
-            } else {
-                category = 'smallProp';
-            }
+            type = (hasAlt && altitude > 25000) ? 'narrowBody' : 'smallProp';
         }
         // 4. Regional jets
         else if (regionalCallsigns.includes(airline)) {
-            category = 'regionalJet';
+            type = 'regionalJet';
         }
         // 5. Speed/altitude heuristics (only when we have real data)
         else if (hasSpeed && hasAlt) {
             if (speed < 60 && altitude < 5000) {
-                // Very slow + very low = likely helicopter
-                category = 'helicopter';
+                type = 'helicopter';
             } else if (altitude < 18000 && speed < 300) {
-                // Below FL180 at moderate speed
-                if (speed < 170 && altitude < 12000) {
-                    category = 'smallProp';
-                } else {
-                    category = 'regionalJet';
-                }
+                type = (speed < 170 && altitude < 12000) ? 'smallProp' : 'regionalJet';
             } else {
-                category = 'narrowBody';
+                type = 'narrowBody';
             }
         }
         // 6. Altitude-only heuristic
         else if (hasAlt && !hasSpeed) {
             if (altitude < 10000) {
-                category = 'smallProp'; // Low altitude, unknown speed - guess GA
+                type = 'smallProp';
             } else if (altitude < 25000) {
-                category = 'regionalJet';
+                type = 'regionalJet';
             } else {
-                category = 'narrowBody';
+                type = 'narrowBody';
             }
         }
         // 7. No useful data yet - stay with default
-        // (will be re-categorized on next update)
 
-        this.aircraftTypes.set(flight.icao, category);
+        this.aircraftTypes.set(flight.icao, { type, fromEmitter: false });
     }
 
     getAircraftSprite(icao) {
-        const category = this.aircraftTypes.get(icao) || 'narrowBody';
+        const cached = this.aircraftTypes.get(icao);
+        const category = cached ? cached.type : 'narrowBody';
         return this.sprites[category] || this.sprites.narrowBody;
     }
 
@@ -1707,7 +1732,8 @@ class ADSBit {
             }
 
             // Get aircraft category and image
-            const category = this.aircraftTypes.get(flight.icao) || 'narrowBody';
+            const cachedType = this.aircraftTypes.get(flight.icao);
+            const category = cachedType ? cachedType.type : 'narrowBody';
             const aircraftImage = this.aircraftImages[category];
             const imageLoaded = this.aircraftImagesLoaded[category];
 
