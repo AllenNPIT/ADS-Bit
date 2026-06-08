@@ -752,6 +752,77 @@ async def handle_admin_scan_receivers(request):
     return web.json_response({"receivers": found})
 
 
+# All valid sprite type names
+SPRITE_TYPES = [
+    "smallProp", "regionalJet", "narrowBody", "wideBody",
+    "heavy", "helicopter", "balloon", "glider", "uav"
+]
+
+# Which ADS-B emitter categories map to each sprite
+SPRITE_CATEGORY_MAP = {
+    "smallProp": "A1, B4",
+    "regionalJet": "A2",
+    "narrowBody": "A3, A4, A6",
+    "wideBody": "A5 (lower alt/speed)",
+    "heavy": "A5 (high alt/speed)",
+    "helicopter": "A7",
+    "balloon": "B2",
+    "glider": "B1",
+    "uav": "B6",
+}
+
+
+@require_auth
+async def handle_admin_sprites(request):
+    """GET /api/admin/sprites - List all sprite types with exists/url info."""
+    sprites = []
+    for stype in SPRITE_TYPES:
+        filepath = WEB_DIR / "images" / f"{stype}.png"
+        sprites.append({
+            "type": stype,
+            "exists": filepath.exists(),
+            "url": f"/images/{stype}.png",
+            "categories": SPRITE_CATEGORY_MAP.get(stype, ""),
+        })
+    return web.json_response({"sprites": sprites})
+
+
+@require_auth
+async def handle_admin_sprite_upload(request):
+    """POST /api/admin/sprites/{type} - Upload/replace a sprite PNG."""
+    stype = request.match_info.get("type", "")
+    if stype not in SPRITE_TYPES:
+        return web.json_response(
+            {"error": f"Invalid sprite type: {stype}"}, status=400
+        )
+
+    reader = await request.multipart()
+    field = await reader.next()
+    if field is None or field.name != "file":
+        return web.json_response({"error": "No file field in upload"}, status=400)
+
+    # Read the uploaded file (limit to 5 MB)
+    data = bytearray()
+    while True:
+        chunk = await field.read_chunk(8192)
+        if not chunk:
+            break
+        data.extend(chunk)
+        if len(data) > 5 * 1024 * 1024:
+            return web.json_response({"error": "File too large (max 5 MB)"}, status=400)
+
+    # Validate PNG header
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        return web.json_response({"error": "File is not a valid PNG"}, status=400)
+
+    # Save to images directory
+    filepath = WEB_DIR / "images" / f"{stype}.png"
+    with open(filepath, "wb") as f:
+        f.write(data)
+
+    return web.json_response({"ok": True, "type": stype})
+
+
 async def restart_receiver_connections():
     """Cancel existing receiver tasks and start new ones."""
     global receivers, receiver_tasks
@@ -863,6 +934,8 @@ async def start_http_server():
     app.router.add_post('/api/admin/password', handle_admin_password)
     app.router.add_post('/api/admin/scan-receivers', handle_admin_scan_receivers)
     app.router.add_post('/api/admin/restart-receivers', handle_admin_restart_receivers)
+    app.router.add_get('/api/admin/sprites', handle_admin_sprites)
+    app.router.add_post('/api/admin/sprites/{type}', handle_admin_sprite_upload)
 
     # Static files (must be last - catch-all)
     app.router.add_get('/{tail:.*}', handle_http)

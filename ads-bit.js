@@ -99,7 +99,10 @@ class ADSBit {
             narrowBody: new Image(),
             wideBody: new Image(),
             heavy: new Image(),
-            helicopter: new Image()
+            helicopter: new Image(),
+            balloon: new Image(),
+            glider: new Image(),
+            uav: new Image()
         };
 
         // Track which images have loaded
@@ -109,7 +112,10 @@ class ADSBit {
             narrowBody: false,
             wideBody: false,
             heavy: false,
-            helicopter: false
+            helicopter: false,
+            balloon: false,
+            glider: false,
+            uav: false
         };
 
         // Load all aircraft images
@@ -785,10 +791,10 @@ class ADSBit {
                 break;
             case 'A6': type = 'narrowBody'; break;     // High performance (> 5g, > 400 kts)
             case 'A7': type = 'helicopter'; break;     // Rotorcraft
-            case 'B1': type = 'smallProp'; break;      // Glider / sailplane
-            case 'B2': type = 'smallProp'; break;      // Lighter-than-air
+            case 'B1': type = 'glider'; break;         // Glider / sailplane
+            case 'B2': type = 'balloon'; break;        // Lighter-than-air
             case 'B4': type = 'smallProp'; break;      // Skydiver drop plane
-            case 'B6': type = 'smallProp'; break;      // UAV
+            case 'B6': type = 'uav'; break;            // UAV
             default:   type = 'narrowBody'; break;     // Unknown or surface vehicles
         }
 
