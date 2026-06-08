@@ -1,0 +1,32 @@
+{
+  "setup_complete": false,
+  "admin": {
+    "password_hash": "",
+    "session_secret": ""
+  },
+  "receivers": "AUTO",
+  "receiver_port": 30003,
+  "location": {
+    "name": "My Location",
+    "lat": 0.0,
+    "lon": 0.0
+  },
+  "web_port": 2001,
+  "theme": "desert",
+  "site": {
+    "title": "ADS-Bit",
+    "subtitle": "Retro Flight Tracker"
+  },
+  "display": {
+    "temperature_unit": "F",
+    "show_weather": true,
+    "show_sidebar": true,
+    "default_view_direction": 0
+  },
+  "tuning": {
+    "flight_timeout_seconds": 60,
+    "broadcast_interval_seconds": 1,
+    "cleanup_interval_seconds": 10,
+    "receiver_reconnect_seconds": 5
+  }
+}
