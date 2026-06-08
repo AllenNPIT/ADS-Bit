@@ -302,6 +302,25 @@ async def connect_to_receiver(host: str, port: int = 30003):
             await asyncio.sleep(reconnect_delay)
 
 
+async def _scan_subnet(network, port):
+    """Scan a single subnet for hosts with an open port. Returns list of IPs."""
+    found = []
+    print(f"Scanning {network} ({network.num_addresses} hosts) on port {port}...")
+    host_ips = [str(host) for host in network.hosts()]
+
+    async def check_ip(test_ip):
+        if await test_port(test_ip, port):
+            return test_ip
+        return None
+
+    results = await asyncio.gather(*[check_ip(h) for h in host_ips])
+    for result in results:
+        if result:
+            print(f"Found receiver at {result}:{port}")
+            found.append(result)
+    return found
+
+
 async def scan_for_receivers():
     """Scan local network for ADS-B receivers on configured port"""
     port = config['receiver_port']
@@ -317,20 +336,7 @@ async def scan_for_receivers():
                 if ip and netmask and not ip.startswith('127.'):
                     try:
                         network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
-                        print(f"Scanning {network} ({network.num_addresses} hosts)...")
-
-                        host_ips = [str(host) for host in network.hosts()]
-
-                        async def check_ip(test_ip):
-                            if await test_port(test_ip, port):
-                                return test_ip
-                            return None
-
-                        results = await asyncio.gather(*[check_ip(h) for h in host_ips])
-                        for result in results:
-                            if result:
-                                print(f"Found receiver at {result}:{port}")
-                                found.append(result)
+                        found.extend(await _scan_subnet(network, port))
                     except ValueError as e:
                         print(f"Invalid network {ip}/{netmask}: {e}")
 
@@ -857,9 +863,57 @@ async def handle_admin_password(request):
 
 
 @require_auth
+async def handle_admin_network_info(request):
+    """GET /api/admin/network-info - Return the server's network interfaces."""
+    interfaces = []
+    for iface in netifaces.interfaces():
+        addrs = netifaces.ifaddresses(iface)
+        if netifaces.AF_INET in addrs:
+            for addr in addrs[netifaces.AF_INET]:
+                ip = addr.get('addr')
+                netmask = addr.get('netmask')
+                if ip and netmask and not ip.startswith('127.'):
+                    try:
+                        network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
+                        interfaces.append({
+                            "name": iface,
+                            "ip": ip,
+                            "netmask": netmask,
+                            "network": str(network)
+                        })
+                    except ValueError:
+                        pass
+    return web.json_response({"interfaces": interfaces})
+
+
+@require_auth
 async def handle_admin_scan_receivers(request):
     """POST /api/admin/scan-receivers - Trigger a receiver scan."""
-    found = await scan_for_receivers()
+    # Check for optional subnet in request body
+    subnet = None
+    try:
+        body = await request.json()
+        subnet = body.get("subnet")
+    except:
+        pass  # No body or invalid JSON — fall back to full scan
+
+    if subnet:
+        # Validate and scan a specific subnet
+        try:
+            network = ipaddress.IPv4Network(subnet, strict=False)
+        except (ValueError, TypeError):
+            return web.json_response(
+                {"error": f"Invalid subnet: {subnet}"}, status=400)
+
+        if network.prefixlen < 20:
+            return web.json_response(
+                {"error": "Subnet too large (max /20 = 4096 hosts)"}, status=400)
+
+        port = config['receiver_port']
+        found = await _scan_subnet(network, port)
+    else:
+        found = await scan_for_receivers()
+
     return web.json_response({"receivers": found})
 
 
@@ -1046,6 +1100,7 @@ async def start_http_server():
     app.router.add_put('/api/admin/themes/{id}', handle_admin_theme_rename)
     app.router.add_post('/api/admin/themes/{id}/{direction}', handle_admin_theme_upload)
     app.router.add_post('/api/admin/password', handle_admin_password)
+    app.router.add_get('/api/admin/network-info', handle_admin_network_info)
     app.router.add_post('/api/admin/scan-receivers', handle_admin_scan_receivers)
     app.router.add_post('/api/admin/restart-receivers', handle_admin_restart_receivers)
     app.router.add_get('/api/admin/sprites', handle_admin_sprites)

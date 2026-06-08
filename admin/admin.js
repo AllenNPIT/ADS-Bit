@@ -27,6 +27,7 @@
         adminPanel.classList.remove('hidden');
         loadConfig();
         loadThemes();
+        loadNetworkInfo();
         refreshStatus();
         statusInterval = setInterval(refreshStatus, 5000);
     }
@@ -170,6 +171,31 @@
         } catch (e) { /* ignore */ }
     }
 
+    // ------- Network Info -------
+    async function loadNetworkInfo() {
+        const el = document.getElementById('network-info');
+        if (!el) return;
+        try {
+            const res = await fetch('/api/admin/network-info');
+            if (!res.ok) { el.textContent = 'Failed to load'; return; }
+            const data = await res.json();
+            const ifaces = data.interfaces || [];
+            if (!ifaces.length) {
+                el.textContent = 'No network interfaces found';
+                return;
+            }
+            let html = '<table class="network-info-table">';
+            html += '<tr><th>Interface</th><th>IP Address</th><th>Network</th></tr>';
+            ifaces.forEach(i => {
+                html += `<tr><td>${i.name}</td><td>${i.ip}</td><td>${i.network}</td></tr>`;
+            });
+            html += '</table>';
+            el.innerHTML = html;
+        } catch (e) {
+            el.textContent = 'Error loading network info';
+        }
+    }
+
     // ------- Receivers -------
     function toggleManualIps(mode) {
         document.getElementById('manual-ips-group').classList.toggle('hidden', mode === 'AUTO');
@@ -184,12 +210,20 @@
         btn.textContent = 'SCANNING...';
         btn.disabled = true;
         try {
-            const res = await fetch('/api/admin/scan-receivers', { method: 'POST' });
+            const subnet = (document.getElementById('scan-subnet').value || '').trim();
+            const fetchOpts = { method: 'POST' };
+            if (subnet) {
+                fetchOpts.headers = { 'Content-Type': 'application/json' };
+                fetchOpts.body = JSON.stringify({ subnet });
+            }
+            const res = await fetch('/api/admin/scan-receivers', fetchOpts);
             const data = await res.json();
             const box = document.getElementById('scan-results');
             const list = document.getElementById('scan-results-list');
             box.classList.remove('hidden');
-            if (data.receivers && data.receivers.length) {
+            if (data.error) {
+                list.textContent = data.error;
+            } else if (data.receivers && data.receivers.length) {
                 list.textContent = data.receivers.join(', ');
             } else {
                 list.textContent = 'No receivers found on network';

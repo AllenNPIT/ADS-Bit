@@ -325,6 +325,35 @@ textarea {
     margin-bottom: 10px;
 }
 
+#network-info-box {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.network-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.network-info-table th,
+.network-info-table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(92, 148, 252, 0.3);
+}
+
+.network-info-table th {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #b4d4ec;
+}
+
+.network-info-table td {
+    color: #54fc54;
+    font-family: 'Courier New', monospace;
+}
+
 /* Toast Notification */
 .toast {
     position: fixed;
