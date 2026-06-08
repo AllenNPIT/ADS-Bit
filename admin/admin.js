@@ -379,15 +379,21 @@
                     const imgHtml = hasImage
                         ? `<img src="/backgrounds/${theme.id}/${dir}.png?v=${cacheBust}" alt="${dir}">`
                         : `<span class="no-sprite">No image</span>`;
+                    const downloadLink = hasImage
+                        ? `<a href="/backgrounds/${theme.id}/${dir}.png" download="${theme.id}_${dir}.png" class="sprite-upload-label">DOWNLOAD</a>`
+                        : '';
                     directionsHtml += `
                         <div class="theme-dir-cell">
                             <div class="theme-dir-label">${dir.toUpperCase()}</div>
                             <div class="theme-dir-preview">${imgHtml}</div>
-                            <label class="sprite-upload-label">
-                                UPLOAD
-                                <input type="file" class="theme-upload-input" accept=".png,image/png"
-                                       data-theme="${theme.id}" data-direction="${dir}">
-                            </label>
+                            <div class="sprite-btn-row">
+                                <label class="sprite-upload-label">
+                                    UPLOAD
+                                    <input type="file" class="theme-upload-input" accept=".png,image/png"
+                                           data-theme="${theme.id}" data-direction="${dir}">
+                                </label>
+                                ${downloadLink}
+                            </div>
                         </div>
                     `;
                 });
@@ -507,14 +513,21 @@
                     ? `<img src="${sprite.url}?v=${cacheBust}" alt="${sprite.type}">`
                     : `<span class="no-sprite">No sprite</span>`;
 
+                const downloadHtml = sprite.exists
+                    ? `<a href="${sprite.url}" download="${sprite.type}.png" class="sprite-upload-label">DOWNLOAD</a>`
+                    : '';
+
                 card.innerHTML = `
                     <h4>${sprite.type}</h4>
                     <div class="sprite-categories">${sprite.categories || ''}</div>
                     <div class="sprite-preview">${imgHtml}</div>
-                    <label class="sprite-upload-label">
-                        UPLOAD
-                        <input type="file" class="sprite-upload-input" accept=".png,image/png" data-type="${sprite.type}">
-                    </label>
+                    <div class="sprite-btn-row">
+                        <label class="sprite-upload-label">
+                            UPLOAD
+                            <input type="file" class="sprite-upload-input" accept=".png,image/png" data-type="${sprite.type}">
+                        </label>
+                        ${downloadHtml}
+                    </div>
                 `;
 
                 const fileInput = card.querySelector('.sprite-upload-input');
