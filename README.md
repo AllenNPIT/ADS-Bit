@@ -33,6 +33,59 @@ python3 server.py
 
 On first run, visit http://localhost:2001 and the setup wizard will guide you through configuration.
 
+## Docker / Podman
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) with Compose V2, **or** [Podman](https://podman.io/) with `podman-compose`
+
+### First Run
+
+```bash
+# Create a config file (the setup wizard runs if you skip this)
+cp config.json.example config.json
+
+# Build and start
+docker compose up -d
+```
+
+The web UI is available at http://localhost:2001.
+
+### Useful Commands
+
+```bash
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+
+# Rebuild after a git pull
+docker compose build && docker compose up -d
+```
+
+### Podman
+
+The same `docker-compose.yml` works with Podman:
+
+```bash
+podman-compose up -d
+```
+
+On SELinux systems (Fedora, RHEL), add `:Z` to each volume mount in `docker-compose.yml` so containers can access the bind-mounted files.
+
+### Data Persistence
+
+The following paths are bind-mounted from the repo directory and persist across container recreation:
+
+| Path | Contents |
+|------|----------|
+| `config.json` | Server configuration and credentials |
+| `images/` | Aircraft and UI sprites (including uploads) |
+| `backgrounds/` | Theme background images (including custom themes) |
+
+Host networking (`network_mode: host`) is used so the server can auto-scan your LAN for ADS-B receivers.
+
 ## Requirements
 
 - Python 3.8+

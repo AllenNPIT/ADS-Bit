@@ -1,0 +1,15 @@
+services:
+  ads-bit:
+    build: .
+    container_name: ads-bit
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist config (copy config.json.example to config.json before first run)
+      - ./config.json:/app/config.json
+      # Persist custom sprite uploads
+      - ./images:/app/images
+      # Persist custom theme backgrounds
+      - ./backgrounds:/app/backgrounds

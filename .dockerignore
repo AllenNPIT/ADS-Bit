@@ -1,0 +1,11 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+config.json
+screenshots/
+.claude/
+CLAUDE.md
+*.swp
+*.swo
+.DS_Store
