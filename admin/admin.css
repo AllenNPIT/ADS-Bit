@@ -443,6 +443,119 @@ textarea {
     display: none;
 }
 
+/* Theme Management */
+.theme-info {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #5c94fc;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+}
+
+.theme-info h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fcd444;
+    margin-bottom: 10px;
+}
+
+.theme-info p {
+    font-size: 12px;
+    color: #b4d4ec;
+    margin-bottom: 4px;
+    line-height: 1.6;
+}
+
+.theme-create-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.theme-create-row input {
+    flex: 1;
+}
+
+.theme-card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid #5c94fc;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.theme-card-header {
+    margin-bottom: 14px;
+}
+
+.theme-card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.theme-name-input {
+    flex: 1;
+    min-width: 150px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.theme-active-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    background: rgba(84, 252, 84, 0.25);
+    color: #54fc54;
+    border: 2px solid #54fc54;
+    border-radius: 4px;
+    padding: 4px 8px;
+    white-space: nowrap;
+}
+
+.theme-directions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.theme-dir-cell {
+    text-align: center;
+}
+
+.theme-dir-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #b4d4ec;
+    margin-bottom: 6px;
+}
+
+.theme-dir-preview {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 4px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    aspect-ratio: 3/2;
+}
+
+.theme-dir-preview img {
+    max-width: 100%;
+    height: auto;
+    max-height: 100%;
+    border-radius: 2px;
+}
+
+.theme-dir-preview .no-sprite {
+    color: #666;
+    font-size: 11px;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     .admin-header {
@@ -487,5 +600,13 @@ textarea {
 
     .sprite-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .theme-directions {
+        grid-template-columns: 1fr;
+    }
+
+    .theme-create-row {
+        flex-direction: column;
     }
 }

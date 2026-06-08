@@ -39,6 +39,7 @@
             <button class="tab" data-tab="receivers">RECEIVERS</button>
             <button class="tab" data-tab="location">LOCATION</button>
             <button class="tab" data-tab="display">DISPLAY</button>
+            <button class="tab" data-tab="themes">THEMES</button>
             <button class="tab" data-tab="tuning">TUNING</button>
             <button class="tab" data-tab="sprites">SPRITES</button>
             <button class="tab" data-tab="security">SECURITY</button>
@@ -172,6 +173,22 @@
                 <div class="button-row">
                     <button id="save-display-btn" class="btn btn-primary">SAVE</button>
                 </div>
+            </section>
+
+            <!-- Themes Tab -->
+            <section id="tab-themes" class="tab-pane hidden">
+                <h2>Theme Management</h2>
+                <div class="theme-info">
+                    <h3>Background Specifications</h3>
+                    <p><strong>Size:</strong> 1536 x 1024 px &nbsp; <strong>Format:</strong> PNG</p>
+                    <p><strong>Directions:</strong> North, East, South, West - each showing the horizon view from your location</p>
+                    <p><strong>Tip:</strong> Place the horizon roughly at the vertical center of each image</p>
+                </div>
+                <div class="theme-create-row">
+                    <input type="text" id="new-theme-name" placeholder="New theme name...">
+                    <button id="create-theme-btn" class="btn btn-primary">CREATE THEME</button>
+                </div>
+                <div id="theme-grid"></div>
             </section>
 
             <!-- Tuning Tab -->
