@@ -749,8 +749,9 @@ class ADSBit {
         flights.forEach(flight => {
             if (flight.lat && flight.lon && flight.altitude) {
                 this.flights.set(flight.icao, flight);
-                // Categorize aircraft type if not already done
-                if (!this.aircraftTypes.has(flight.icao)) {
+                // Categorize aircraft type - re-evaluate when speed data arrives
+                // since early messages often lack speed, leading to wrong guesses
+                if (!this.aircraftTypes.has(flight.icao) || (flight.speed > 0 && flight.callsign)) {
                     this.categorizeAircraft(flight);
                 }
             }
@@ -760,58 +761,93 @@ class ADSBit {
 
     categorizeAircraft(flight) {
         // Categorize aircraft based on available data
-        // Priority: 1. Helicopter detection, 2. Callsign patterns, 3. Altitude/Speed heuristics
+        // Priority: 1. Callsign-based, 2. Altitude/Speed heuristics, 3. Default
+        //
+        // NOTE: speed=0 or altitude=0 means data not yet received, so we
+        // avoid making assumptions from missing data.  The caller should
+        // re-categorize once better data arrives.
 
         let category = 'narrowBody'; // Default
 
         const callsign = (flight.callsign || '').trim();
         const altitude = flight.altitude || 0;
         const speed = flight.speed || 0;
+        const hasSpeed = speed > 0;
+        const hasAlt = altitude > 0;
 
-        // Helicopter detection with multiple criteria
-        // Known helicopter callsign patterns (medical, news, police, tours, etc.)
-        const helicopterCallsigns = ['LIFE', 'MED', 'STAR', 'AIR', 'CARE', 'MERCY', 'REACH', 'CHP', 'COPTER', 'HELO', 'N', 'PHI'];
-        const isHelicopterCallsign = helicopterCallsigns.some(pattern =>
-            callsign.includes(pattern) || callsign.startsWith('N') && callsign.length <= 6
-        );
+        // --- Callsign-based detection (most reliable) ---
+        const airline = callsign.length >= 3 ? callsign.substring(0, 3) : '';
 
-        // Helicopter speed/altitude heuristics:
-        // - Very low speed at any altitude (< 100 knots)
-        // - Low altitude with moderate speed (< 3000 ft and < 180 knots)
-        // - Known helicopter callsign with reasonable parameters (< 10000 ft and < 200 knots)
-        if (isHelicopterCallsign && altitude < 10000 && speed < 200) {
-            category = 'helicopter';
-        } else if (speed < 100 && altitude < 15000) {
-            category = 'helicopter';
-        } else if (altitude < 3000 && speed < 180) {
+        // Known helicopter operator callsign prefixes
+        const heliOperators = ['LFE', 'MED', 'CHP', 'PHI', 'ERA', 'BHS'];
+        // Keywords that appear anywhere in helicopter callsigns
+        const heliKeywords = ['LIFE', 'MERCY', 'REACH', 'COPTER', 'HELO', 'MEDEVAC', 'CARE'];
+        const isHeliCallsign = heliOperators.includes(airline) ||
+            heliKeywords.some(kw => callsign.includes(kw));
+
+        const heavyCallsigns = ['CPA', 'UAE', 'ETH', 'QTR', 'SIA', 'KLM', 'AFL', 'BAW', 'AAL', 'DAL', 'UAL', 'FDX', 'UPS'];
+        const regionalCallsigns = ['SKW', 'RPA', 'ASH', 'PDT', 'CHQ', 'ENY', 'JIA', 'CPZ'];
+
+        // N-number = US general aviation registration (Cessna, Piper, etc.)
+        const isNNumber = callsign.startsWith('N') && callsign.length >= 4 && callsign.length <= 6 && /^N\d/.test(callsign);
+
+        // --- Apply rules ---
+
+        // 1. Helicopter: callsign match + reasonable flight envelope
+        if (isHeliCallsign) {
             category = 'helicopter';
         }
-        // Heavy/jumbo aircraft callsigns (cargo and passenger)
-        else if (callsign.length > 0) {
-            const heavyCallsigns = ['CPA', 'UAE', 'ETH', 'QTR', 'SIA', 'KLM', 'AFL', 'BAW', 'AAL', 'DAL', 'UAL', 'FDX', 'UPS'];
-            // Regional jet callsigns
-            const regionalCallsigns = ['SKW', 'RPA', 'ASH', 'PDT', 'CHQ', 'ENY'];
-            // Small prop patterns (typically GA aircraft with N-numbers or short callsigns)
-            const isSmallProp = callsign.length <= 4 && (callsign.startsWith('N') || !callsign.match(/[0-9]/));
-
-            // Check callsign patterns
-            const airline = callsign.substring(0, 3);
-            if (heavyCallsigns.includes(airline) || altitude > 40000 || speed > 500) {
-                // High altitude or speed suggests wide body or heavy
-                if (altitude > 42000 || speed > 550) {
-                    category = 'heavy';
-                } else {
-                    category = 'wideBody';
-                }
-            } else if (regionalCallsigns.includes(airline) || (altitude < 25000 && speed < 350)) {
-                category = 'regionalJet';
-            } else if (isSmallProp || (altitude < 10000 && speed < 200)) {
-                category = 'smallProp';
+        // 2. Heavy / Wide body
+        else if (heavyCallsigns.includes(airline)) {
+            category = (hasAlt && altitude > 42000) || (hasSpeed && speed > 550) ? 'heavy' : 'wideBody';
+        }
+        else if ((hasAlt && altitude > 42000) || (hasSpeed && speed > 550)) {
+            category = 'heavy';
+        }
+        else if ((hasAlt && altitude > 40000) || (hasSpeed && speed > 500)) {
+            category = 'wideBody';
+        }
+        // 3. N-number = general aviation (small prop unless data says otherwise)
+        else if (isNNumber) {
+            // N-numbers at high altitude/speed are likely turboprops or light jets
+            if (hasAlt && altitude > 25000) {
+                category = 'narrowBody';
             } else {
-                // Default narrow body (737, A320 family)
+                category = 'smallProp';
+            }
+        }
+        // 4. Regional jets
+        else if (regionalCallsigns.includes(airline)) {
+            category = 'regionalJet';
+        }
+        // 5. Speed/altitude heuristics (only when we have real data)
+        else if (hasSpeed && hasAlt) {
+            if (speed < 60 && altitude < 5000) {
+                // Very slow + very low = likely helicopter
+                category = 'helicopter';
+            } else if (altitude < 18000 && speed < 300) {
+                // Below FL180 at moderate speed
+                if (speed < 170 && altitude < 12000) {
+                    category = 'smallProp';
+                } else {
+                    category = 'regionalJet';
+                }
+            } else {
                 category = 'narrowBody';
             }
         }
+        // 6. Altitude-only heuristic
+        else if (hasAlt && !hasSpeed) {
+            if (altitude < 10000) {
+                category = 'smallProp'; // Low altitude, unknown speed - guess GA
+            } else if (altitude < 25000) {
+                category = 'regionalJet';
+            } else {
+                category = 'narrowBody';
+            }
+        }
+        // 7. No useful data yet - stay with default
+        // (will be re-categorized on next update)
 
         this.aircraftTypes.set(flight.icao, category);
     }
