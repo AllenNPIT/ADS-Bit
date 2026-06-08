@@ -72,6 +72,11 @@
                 spritesLoaded = true;
                 loadSprites();
             }
+            // Lazy-load theme manager on first visit
+            if (tab.dataset.tab === 'themes' && !themesManagerLoaded) {
+                themesManagerLoaded = true;
+                loadThemeManager();
+            }
         });
     });
 
@@ -143,7 +148,7 @@
         }
     }
 
-    // ------- Load Themes -------
+    // ------- Load Themes (Display tab dropdown) -------
     async function loadThemes() {
         try {
             const res = await fetch('/api/admin/themes');
@@ -153,8 +158,8 @@
             sel.innerHTML = '';
             (data.themes || []).forEach(t => {
                 const opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+                opt.value = t.id;
+                opt.textContent = t.name;
                 sel.appendChild(opt);
             });
             // Apply pending value if config loaded first
@@ -310,6 +315,141 @@
         } catch (e) {
             toast('Connection error', true);
         }
+    });
+
+    // ------- Theme Manager -------
+    let themesManagerLoaded = false;
+
+    async function loadThemeManager() {
+        try {
+            const res = await fetch('/api/admin/themes');
+            if (!res.ok) return;
+            const data = await res.json();
+            const grid = document.getElementById('theme-grid');
+            if (!grid) return;
+
+            const activeTheme = data.active || '';
+            grid.innerHTML = '';
+
+            (data.themes || []).forEach(theme => {
+                const card = document.createElement('div');
+                card.className = 'theme-card';
+
+                const isActive = theme.id === activeTheme;
+                const badgeHtml = isActive ? '<span class="theme-active-badge">ACTIVE</span>' : '';
+                const cacheBust = Date.now();
+
+                let directionsHtml = '';
+                ['north', 'east', 'south', 'west'].forEach(dir => {
+                    const hasImage = theme.directions[dir];
+                    const imgHtml = hasImage
+                        ? `<img src="/backgrounds/${theme.id}/${dir}.png?v=${cacheBust}" alt="${dir}">`
+                        : `<span class="no-sprite">No image</span>`;
+                    directionsHtml += `
+                        <div class="theme-dir-cell">
+                            <div class="theme-dir-label">${dir.toUpperCase()}</div>
+                            <div class="theme-dir-preview">${imgHtml}</div>
+                            <label class="sprite-upload-label">
+                                UPLOAD
+                                <input type="file" class="theme-upload-input" accept=".png,image/png"
+                                       data-theme="${theme.id}" data-direction="${dir}">
+                            </label>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="theme-card-header">
+                        <div class="theme-card-title">
+                            <input type="text" class="theme-name-input" value="${theme.name}" data-theme="${theme.id}">
+                            <button class="btn btn-small theme-rename-btn" data-theme="${theme.id}">RENAME</button>
+                            ${badgeHtml}
+                        </div>
+                    </div>
+                    <div class="theme-directions">${directionsHtml}</div>
+                `;
+
+                // Rename handler
+                const renameBtn = card.querySelector('.theme-rename-btn');
+                const nameInput = card.querySelector('.theme-name-input');
+                renameBtn.addEventListener('click', async () => {
+                    const newName = nameInput.value.trim();
+                    if (!newName) { toast('Name cannot be empty', true); return; }
+                    try {
+                        const r = await fetch(`/api/admin/themes/${theme.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: newName })
+                        });
+                        if (r.ok) {
+                            toast('Theme renamed');
+                            loadThemes(); // refresh Display tab dropdown
+                        } else {
+                            const err = await r.json();
+                            toast(err.error || 'Rename failed', true);
+                        }
+                    } catch (e) { toast('Connection error', true); }
+                });
+
+                // Upload handlers
+                card.querySelectorAll('.theme-upload-input').forEach(input => {
+                    input.addEventListener('change', async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        if (!file.type.includes('png')) {
+                            toast('Only PNG files are allowed', true);
+                            e.target.value = '';
+                            return;
+                        }
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const tid = input.dataset.theme;
+                        const dir = input.dataset.direction;
+                        try {
+                            const r = await fetch(`/api/admin/themes/${tid}/${dir}`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                            if (r.ok) {
+                                toast(`${dir} background updated`);
+                                loadThemeManager(); // refresh previews
+                            } else {
+                                const err = await r.json();
+                                toast(err.error || 'Upload failed', true);
+                            }
+                        } catch (err) { toast('Upload error', true); }
+                        e.target.value = '';
+                    });
+                });
+
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Failed to load theme manager', e);
+        }
+    }
+
+    // Create theme handler
+    document.getElementById('create-theme-btn').addEventListener('click', async () => {
+        const nameInput = document.getElementById('new-theme-name');
+        const name = nameInput.value.trim();
+        if (!name) { toast('Enter a theme name', true); return; }
+        try {
+            const res = await fetch('/api/admin/themes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                nameInput.value = '';
+                toast('Theme created');
+                loadThemeManager();
+                loadThemes(); // refresh Display tab dropdown
+            } else {
+                const err = await res.json();
+                toast(err.error || 'Create failed', true);
+            }
+        } catch (e) { toast('Connection error', true); }
     });
 
     // ------- Sprites -------

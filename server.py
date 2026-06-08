@@ -6,6 +6,7 @@ import json
 import time
 import os
 import copy
+import re
 import secrets
 import ipaddress
 from pathlib import Path
@@ -53,7 +54,8 @@ DEFAULT_CONFIG = {
         "broadcast_interval_seconds": 1,
         "cleanup_interval_seconds": 10,
         "receiver_reconnect_seconds": 5
-    }
+    },
+    "theme_names": {}
 }
 
 
@@ -705,16 +707,125 @@ async def handle_admin_status(request):
     })
 
 
+VALID_DIRECTIONS = ("north", "east", "south", "west")
+
+
 @require_auth
 async def handle_admin_themes(request):
-    """GET /api/admin/themes - List available themes."""
+    """GET /api/admin/themes - List available themes with display names and directions."""
     bg_dir = WEB_DIR / "backgrounds"
     themes = []
+    theme_names = config.get("theme_names", {})
     if bg_dir.exists():
         for d in sorted(bg_dir.iterdir()):
-            if d.is_dir() and (d / "north.png").exists():
-                themes.append(d.name)
-    return web.json_response({"themes": themes})
+            if d.is_dir():
+                directions = {}
+                for direction in VALID_DIRECTIONS:
+                    directions[direction] = (d / f"{direction}.png").exists()
+                display_name = theme_names.get(d.name, d.name.replace("_", " ").replace("-", " ").title())
+                themes.append({
+                    "id": d.name,
+                    "name": display_name,
+                    "directions": directions,
+                })
+    return web.json_response({"themes": themes, "active": config.get("theme", "desert")})
+
+
+def _valid_theme_id(theme_id: str) -> bool:
+    """Reject path-traversal attempts in theme IDs."""
+    return bool(theme_id) and '/' not in theme_id and '\\' not in theme_id and theme_id not in ('.', '..')
+
+
+@require_auth
+async def handle_admin_theme_create(request):
+    """POST /api/admin/themes - Create a new theme."""
+    try:
+        body = await request.json()
+    except:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+
+    name = body.get("name", "").strip()
+    if not name:
+        return web.json_response({"error": "Theme name is required"}, status=400)
+
+    # Generate slug from name
+    slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+    if not slug or not _valid_theme_id(slug):
+        return web.json_response({"error": "Invalid theme name"}, status=400)
+
+    bg_dir = WEB_DIR / "backgrounds" / slug
+    if bg_dir.exists():
+        return web.json_response({"error": "Theme already exists"}, status=409)
+
+    bg_dir.mkdir(parents=True, exist_ok=True)
+    config.setdefault("theme_names", {})[slug] = name
+    save_config()
+    return web.json_response({"ok": True, "id": slug, "name": name})
+
+
+@require_auth
+async def handle_admin_theme_rename(request):
+    """PUT /api/admin/themes/{id} - Rename a theme's display name."""
+    theme_id = request.match_info.get("id", "")
+    if not _valid_theme_id(theme_id):
+        return web.json_response({"error": "Invalid theme ID"}, status=400)
+    bg_dir = WEB_DIR / "backgrounds" / theme_id
+    if not bg_dir.exists() or not bg_dir.is_dir():
+        return web.json_response({"error": "Theme not found"}, status=404)
+
+    try:
+        body = await request.json()
+    except:
+        return web.json_response({"error": "Invalid JSON"}, status=400)
+
+    name = body.get("name", "").strip()
+    if not name:
+        return web.json_response({"error": "Display name is required"}, status=400)
+
+    config.setdefault("theme_names", {})[theme_id] = name
+    save_config()
+    return web.json_response({"ok": True, "id": theme_id, "name": name})
+
+
+@require_auth
+async def handle_admin_theme_upload(request):
+    """POST /api/admin/themes/{id}/{direction} - Upload a background PNG."""
+    theme_id = request.match_info.get("id", "")
+    direction = request.match_info.get("direction", "")
+
+    if not _valid_theme_id(theme_id):
+        return web.json_response({"error": "Invalid theme ID"}, status=400)
+    if direction not in VALID_DIRECTIONS:
+        return web.json_response({"error": f"Invalid direction: {direction}"}, status=400)
+
+    bg_dir = WEB_DIR / "backgrounds" / theme_id
+    if not bg_dir.exists() or not bg_dir.is_dir():
+        return web.json_response({"error": "Theme not found"}, status=404)
+
+    reader = await request.multipart()
+    field = await reader.next()
+    if field is None or field.name != "file":
+        return web.json_response({"error": "No file field in upload"}, status=400)
+
+    # Read the uploaded file (limit to 10 MB for background images)
+    data = bytearray()
+    while True:
+        chunk = await field.read_chunk(8192)
+        if not chunk:
+            break
+        data.extend(chunk)
+        if len(data) > 10 * 1024 * 1024:
+            return web.json_response({"error": "File too large (max 10 MB)"}, status=400)
+
+    # Validate PNG header
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        return web.json_response({"error": "File is not a valid PNG"}, status=400)
+
+    filepath = bg_dir / f"{direction}.png"
+    with open(filepath, "wb") as f:
+        f.write(data)
+
+    return web.json_response({"ok": True, "id": theme_id, "direction": direction})
 
 
 @require_auth
@@ -931,6 +1042,9 @@ async def start_http_server():
     app.router.add_put('/api/admin/config', handle_admin_config_update)
     app.router.add_get('/api/admin/status', handle_admin_status)
     app.router.add_get('/api/admin/themes', handle_admin_themes)
+    app.router.add_post('/api/admin/themes', handle_admin_theme_create)
+    app.router.add_put('/api/admin/themes/{id}', handle_admin_theme_rename)
+    app.router.add_post('/api/admin/themes/{id}/{direction}', handle_admin_theme_upload)
     app.router.add_post('/api/admin/password', handle_admin_password)
     app.router.add_post('/api/admin/scan-receivers', handle_admin_scan_receivers)
     app.router.add_post('/api/admin/restart-receivers', handle_admin_restart_receivers)

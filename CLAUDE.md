@@ -46,6 +46,8 @@ Access at http://localhost:{web_port} (configured in config.json)
 - **index.html** - Main HTML interface with embedded styles
 
 - **admin/** - Admin panel (login + tabbed settings UI)
+  - Theme management: rename display names, upload per-direction background PNGs, create new themes
+  - Display names stored in `config.json` `theme_names` map (folder name -> display name)
 
 - **setup/** - First-run setup wizard (multi-step configuration)
 
