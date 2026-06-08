@@ -348,6 +348,101 @@ textarea {
     color: #fff;
 }
 
+/* Sprite Management */
+.sprite-info {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #5c94fc;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+}
+
+.sprite-info h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fcd444;
+    margin-bottom: 10px;
+}
+
+.sprite-info p {
+    font-size: 12px;
+    color: #b4d4ec;
+    margin-bottom: 4px;
+    line-height: 1.6;
+}
+
+.sprite-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.sprite-card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid #5c94fc;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+}
+
+.sprite-card h4 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fcfcfc;
+    margin-bottom: 4px;
+}
+
+.sprite-card .sprite-categories {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.sprite-preview {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 6px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.sprite-preview img {
+    max-width: 100%;
+    height: auto;
+    max-height: 80px;
+    image-rendering: pixelated;
+}
+
+.sprite-preview .no-sprite {
+    color: #666;
+    font-size: 11px;
+}
+
+.sprite-upload-label {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 6px 12px;
+    border: 2px solid #5c94fc;
+    border-radius: 6px;
+    background: rgba(92, 148, 252, 0.2);
+    color: #fcfcfc;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sprite-upload-label:hover {
+    background: rgba(92, 148, 252, 0.4);
+}
+
+.sprite-upload-input {
+    display: none;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     .admin-header {
@@ -388,5 +483,9 @@ textarea {
 
     .button-row .btn {
         width: 100%;
+    }
+
+    .sprite-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

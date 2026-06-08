@@ -67,6 +67,11 @@
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
             tab.classList.add('active');
             document.getElementById('tab-' + tab.dataset.tab).classList.remove('hidden');
+            // Lazy-load sprites on first visit
+            if (tab.dataset.tab === 'sprites' && !spritesLoaded) {
+                spritesLoaded = true;
+                loadSprites();
+            }
         });
     });
 
@@ -306,6 +311,76 @@
             toast('Connection error', true);
         }
     });
+
+    // ------- Sprites -------
+    let spritesLoaded = false;
+
+    async function loadSprites() {
+        try {
+            const res = await fetch('/api/admin/sprites');
+            if (!res.ok) return;
+            const data = await res.json();
+            const grid = document.getElementById('sprite-grid');
+            if (!grid) return;
+
+            grid.innerHTML = '';
+            (data.sprites || []).forEach(sprite => {
+                const card = document.createElement('div');
+                card.className = 'sprite-card';
+
+                const cacheBust = Date.now();
+                const imgHtml = sprite.exists
+                    ? `<img src="${sprite.url}?v=${cacheBust}" alt="${sprite.type}">`
+                    : `<span class="no-sprite">No sprite</span>`;
+
+                card.innerHTML = `
+                    <h4>${sprite.type}</h4>
+                    <div class="sprite-categories">${sprite.categories || ''}</div>
+                    <div class="sprite-preview">${imgHtml}</div>
+                    <label class="sprite-upload-label">
+                        UPLOAD
+                        <input type="file" class="sprite-upload-input" accept=".png,image/png" data-type="${sprite.type}">
+                    </label>
+                `;
+
+                const fileInput = card.querySelector('.sprite-upload-input');
+                fileInput.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    if (!file.type.includes('png')) {
+                        toast('Only PNG files are allowed', true);
+                        e.target.value = '';
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    try {
+                        const uploadRes = await fetch(`/api/admin/sprites/${sprite.type}`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (uploadRes.ok) {
+                            toast(`${sprite.type} sprite updated`);
+                            loadSprites(); // Refresh previews
+                        } else {
+                            const err = await uploadRes.json();
+                            toast(err.error || 'Upload failed', true);
+                        }
+                    } catch (err) {
+                        toast('Upload error', true);
+                    }
+                    e.target.value = '';
+                });
+
+                grid.appendChild(card);
+            });
+        } catch (e) {
+            console.error('Failed to load sprites', e);
+        }
+    }
 
     // ------- Helpers -------
     async function saveConfig(body) {

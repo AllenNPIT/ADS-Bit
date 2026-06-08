@@ -52,7 +52,7 @@ Access at http://localhost:{web_port} (configured in config.json)
 ### Sprite Assets
 
 All PNG sprites face right (eastward) and are flipped in-canvas for westbound aircraft:
-- 6 aircraft types: smallProp, regionalJet, narrowBody, wideBody, heavy, helicopter
+- 9 aircraft types: smallProp, regionalJet, narrowBody, wideBody, heavy, helicopter, balloon, glider, uav
 - Directional backgrounds: north.png, south.png, east.png, west.png (1536x1024, shown based on view direction)
 - Celestial: sun.png, moon_6_phases.png (2x3 sprite sheet)
 - Weather: happycloud.png (clear), raincloud.png (rain/snow)
@@ -75,10 +75,10 @@ Mapping from DO-260B emitter categories to sprite types:
 | A5 | Heavy (> 300,000 lbs) | wideBody or heavy (by altitude/speed) |
 | A6 | High performance (> 5g, > 400 kts) | narrowBody |
 | A7 | Rotorcraft | helicopter |
-| B1 | Glider / sailplane | smallProp |
-| B2 | Lighter-than-air | smallProp |
+| B1 | Glider / sailplane | glider |
+| B2 | Lighter-than-air | balloon |
 | B4 | Skydiver drop plane | smallProp |
-| B6 | UAV | smallProp |
+| B6 | UAV | uav |
 
 Once an emitter category is received for an aircraft, it is locked in and heuristic re-evaluation is skipped.
 

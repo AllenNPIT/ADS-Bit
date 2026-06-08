@@ -40,6 +40,7 @@
             <button class="tab" data-tab="location">LOCATION</button>
             <button class="tab" data-tab="display">DISPLAY</button>
             <button class="tab" data-tab="tuning">TUNING</button>
+            <button class="tab" data-tab="sprites">SPRITES</button>
             <button class="tab" data-tab="security">SECURITY</button>
         </nav>
 
@@ -198,6 +199,20 @@
                 </div>
                 <div class="button-row">
                     <button id="save-tuning-btn" class="btn btn-primary">SAVE</button>
+                </div>
+            </section>
+
+            <!-- Sprites Tab -->
+            <section id="tab-sprites" class="tab-pane hidden">
+                <h2>Aircraft Sprites</h2>
+                <div class="sprite-info">
+                    <h3>Sprite Specifications</h3>
+                    <p><strong>Size:</strong> 500 x 333 px &nbsp; <strong>Format:</strong> PNG 8-bit RGBA (transparent background)</p>
+                    <p><strong>Orientation:</strong> Facing right (auto-flipped for westbound aircraft)</p>
+                    <p><strong>Style:</strong> Retro SNES pixel art, white/blue/red color scheme</p>
+                </div>
+                <div id="sprite-grid" class="sprite-grid">
+                    <!-- Populated by JS -->
                 </div>
             </section>
 
