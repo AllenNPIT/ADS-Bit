@@ -1,5 +1,5 @@
-// Pixel ADS-B - Retro Side View
-class PixelADSB {
+// ADS-Bit - Retro Side View
+class ADSBit {
     constructor() {
         this.canvas = document.getElementById('pixel-canvas');
         this.ctx = this.canvas.getContext('2d');
@@ -618,7 +618,7 @@ class PixelADSB {
 
     async fetchReceiverLocation() {
         try {
-            // Fetch from same server that serves pixel-view
+            // Fetch from same server that serves ADS-Bit
             const response = await fetch('/api/receiver-location');
             const data = await response.json();
             this.receiverLat = data.lat;
@@ -1970,4 +1970,4 @@ class PixelADSB {
 }
 
 // Initialize the app
-const app = new PixelADSB();
+const app = new ADSBit();

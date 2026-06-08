@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pixel ADS-B Server - Connects directly to ADS-B receivers"""
+"""ADS-Bit Server - Connects directly to ADS-B receivers"""
 import asyncio
 import socket
 import json
@@ -833,7 +833,7 @@ async def main():
     """Main entry point"""
     global receivers, receiver_tasks
 
-    print("Pixel ADS-B Server Starting...")
+    print("ADS-Bit Server Starting...")
 
     load_config()
 
