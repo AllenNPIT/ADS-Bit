@@ -522,6 +522,7 @@
                     <div class="sprite-categories">${sprite.categories || ''}</div>
                     <div class="sprite-preview">${imgHtml}</div>
                     <div class="sprite-btn-row">
+                        <button class="sprite-upload-label sprite-edit-btn" data-type="${sprite.type}">EDIT</button>
                         <label class="sprite-upload-label">
                             UPLOAD
                             <input type="file" class="sprite-upload-input" accept=".png,image/png" data-type="${sprite.type}">
@@ -529,6 +530,15 @@
                         ${downloadHtml}
                     </div>
                 `;
+
+                const editBtn = card.querySelector('.sprite-edit-btn');
+                editBtn.addEventListener('click', () => {
+                    if (window.PixelEditor) {
+                        window.PixelEditor.open(sprite.type, { onSave: loadSprites });
+                    } else {
+                        toast('Pixel editor not loaded', true);
+                    }
+                });
 
                 const fileInput = card.querySelector('.sprite-upload-input');
                 fileInput.addEventListener('change', async (e) => {

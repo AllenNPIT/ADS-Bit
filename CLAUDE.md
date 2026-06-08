@@ -48,6 +48,11 @@ Access at http://localhost:{web_port} (configured in config.json)
 - **admin/** - Admin panel (login + tabbed settings UI)
   - Theme management: rename display names, upload per-direction background PNGs, create new themes
   - Display names stored in `config.json` `theme_names` map (folder name -> display name)
+  - **pixel-editor.js** - In-app Canvas2D pixel editor (Sprites tab "EDIT" button)
+    - Edits sprites at native 500x333; tools: pencil, eraser, color picker, fill bucket, pan
+    - Zoom/pan, undo/redo (snapshot-per-stroke), grid overlay, retro palette + native color input
+    - Exports a 500x333 PNG via `srcCanvas.toBlob` and POSTs to the existing `/api/admin/sprites/{type}` upload endpoint (no new server route)
+    - Keyboard: B/E/I/F tools, Space=pan, +/-/0 zoom, Ctrl+Z/Y undo/redo, G grid, Esc close
 
 - **setup/** - First-run setup wizard (multi-step configuration)
 
