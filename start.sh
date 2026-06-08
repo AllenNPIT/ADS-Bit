@@ -1,4 +1,4 @@
 #!/bin/bash
 cd "$(dirname "$0")"
-echo "Starting Pixel View ADS-B server..."
+echo "Starting ADS-Bit server..."
 python3 server.py

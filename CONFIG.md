@@ -1,6 +1,6 @@
-# Pixel View Configuration Guide
+# ADS-Bit Configuration Guide
 
-This guide explains how to configure Pixel View for your ADS-B receiver setup.
+This guide explains how to configure ADS-Bit for your ADS-B receiver setup.
 
 ## Configuration File
 
@@ -55,7 +55,7 @@ Edit `config.json` to customize your installation:
 
 ## Background Themes
 
-Pixel View uses directional background images to show the horizon view from your receiver location. Backgrounds are organized into themes stored in the `backgrounds/` folder.
+ADS-Bit uses directional background images to show the horizon view from your receiver location. Backgrounds are organized into themes stored in the `backgrounds/` folder.
 
 ### Available Themes
 
@@ -228,29 +228,29 @@ All aircraft sprites should face **right (east)** - the code flips them automati
 
 ## Running as a Service (Auto-Start)
 
-To run Pixel-ADSB automatically on boot, create a systemd service:
+To run ADS-Bit automatically on boot, create a systemd service:
 
 ### 1. Create the service file
 
 ```bash
-sudo nano /etc/systemd/system/pixel-adsb.service
+sudo nano /etc/systemd/system/ads-bit.service
 ```
 
 Add this content (adjust paths as needed):
 
 ```ini
 [Unit]
-Description=Pixel-ADSB Flight Tracker
+Description=ADS-Bit Flight Tracker
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/path/to/pixel-view
-ExecStart=/usr/bin/python3 /path/to/pixel-view/server.py
+WorkingDirectory=/path/to/ADS-BIT
+ExecStart=/usr/bin/python3 /path/to/ADS-BIT/server.py
 Restart=always
 RestartSec=5
-StandardOutput=append:/var/log/pixel-adsb.log
-StandardError=append:/var/log/pixel-adsb.log
+StandardOutput=append:/var/log/ads-bit.log
+StandardError=append:/var/log/ads-bit.log
 
 [Install]
 WantedBy=multi-user.target
@@ -260,18 +260,18 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable pixel-adsb
-sudo systemctl start pixel-adsb
+sudo systemctl enable ads-bit
+sudo systemctl start ads-bit
 ```
 
 ### 3. Check status
 
 ```bash
-sudo systemctl status pixel-adsb
+sudo systemctl status ads-bit
 ```
 
 ### 4. View logs
 
 ```bash
-tail -f /var/log/pixel-adsb.log
+tail -f /var/log/ads-bit.log
 ```

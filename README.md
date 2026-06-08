@@ -1,8 +1,8 @@
-# Pixel-ADSB
+# ADS-Bit
 
 A retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites.
 
-![Pixel-ADSB Screenshot](screenshots/screenshot.png)
+![ADS-Bit Screenshot](screenshots/screenshot.png)
 
 ## Features
 
@@ -14,6 +14,8 @@ A retro SNES-style side-view flight tracker that displays ADS-B aircraft data wi
 - Directional view (N/E/S/W) with themed backgrounds
 - Auto-discovery of ADS-B receivers on your network
 - Canvas-based 10 FPS retro rendering
+- Admin panel with password authentication
+- First-run setup wizard
 
 ## Quick Start
 
@@ -25,14 +27,11 @@ cd ADS-Bit
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure your location (required for weather and celestial positioning)
-# Edit config.json and set your lat/lon coordinates
-
 # Start the server
 python3 server.py
 ```
 
-Access at http://localhost:2001
+On first run, visit http://localhost:2001 and the setup wizard will guide you through configuration.
 
 ## Requirements
 
@@ -42,7 +41,7 @@ Access at http://localhost:2001
 
 ## Configuration
 
-Edit `config.json` to customize your installation:
+ADS-Bit uses a first-run setup wizard to configure your installation. You can also edit `config.json` directly:
 
 ```json
 {

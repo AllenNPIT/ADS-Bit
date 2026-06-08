@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pixel View is a retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites. It's a standalone sub-project within the larger IceNet-ADS-B system.
+ADS-Bit is a retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites.
 
 ## Running the Server
 
@@ -28,12 +28,13 @@ Access at http://localhost:{web_port} (configured in config.json)
   - Parses SBS/BaseStation format messages from receivers
   - Broadcasts flight data to connected WebSocket clients every 1 second
   - Cleans up flights not seen in 60 seconds
-  - Serves static files and receiver location API
+  - Serves static files, admin panel, setup wizard, and APIs
+  - Authentication via bcrypt password hashing and session cookies
 
 - **config.json** - Configuration file for receiver and location settings
   - See CONFIG.md for full documentation
 
-- **pixel-view.js** - JavaScript rendering engine (Canvas-based)
+- **ads-bit.js** - JavaScript rendering engine (Canvas-based)
   - Handles WebSocket connection and flight data updates
   - Renders 10 FPS retro-style canvas animation
   - Layer order (bottom to top): sky gradient → clouds → sun → moon → directional background → grid → aircraft → labels
@@ -42,6 +43,10 @@ Access at http://localhost:{web_port} (configured in config.json)
   - View direction rotates between N/E/S/W (arrow keys or A/D), changing the background
 
 - **index.html** - Main HTML interface with embedded styles
+
+- **admin/** - Admin panel (login + tabbed settings UI)
+
+- **setup/** - First-run setup wizard (multi-step configuration)
 
 ### Sprite Assets
 
@@ -79,6 +84,7 @@ The viewer can rotate between cardinal directions (N/E/S/W), showing aircraft in
 Python packages required:
 - aiohttp (web server and WebSocket)
 - netifaces (network interface scanning)
+- bcrypt (password hashing)
 
 No package.json - frontend is vanilla JavaScript with no build step.
 
