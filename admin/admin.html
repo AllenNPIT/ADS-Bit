@@ -76,6 +76,10 @@
             <!-- Receivers Tab -->
             <section id="tab-receivers" class="tab-pane hidden">
                 <h2>Receiver Configuration</h2>
+                <div id="network-info-box" class="info-box">
+                    <h3>Host Network</h3>
+                    <div id="network-info">Loading...</div>
+                </div>
                 <div class="form-group">
                     <label>Discovery Mode</label>
                     <select id="receiver-mode">
@@ -90,6 +94,10 @@
                 <div class="form-group">
                     <label>Receiver Port</label>
                     <input type="number" id="receiver-port" value="30003" min="1" max="65535">
+                </div>
+                <div class="form-group">
+                    <label>Custom Subnet (optional)</label>
+                    <input type="text" id="scan-subnet" placeholder="e.g. 10.0.0.0/24 (leave empty to scan all local subnets)">
                 </div>
                 <div class="button-row">
                     <button id="scan-receivers-btn" class="btn">SCAN NOW</button>
