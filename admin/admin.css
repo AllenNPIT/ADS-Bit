@@ -472,6 +472,13 @@ textarea {
     display: none;
 }
 
+.sprite-btn-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 /* Theme Management */
 .theme-info {
     background: rgba(0, 0, 0, 0.3);
