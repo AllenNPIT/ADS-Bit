@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>ADS-Bit - Retro Flight Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: #fcfcfc;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #header {
+            text-align: center;
+            padding: 8px;
+            font-size: clamp(18px, 5vw, 28px);
+            color: #fcd444;
+            text-shadow: 2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000;
+            letter-spacing: 1px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        #main-content {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            max-width: 1600px;
+            gap: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #pixel-canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 4px solid #34495e;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4),
+                        inset 0 0 0 2px #5c94fc;
+            background: #000;
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Aircraft Sidebar */
+        #aircraft-sidebar {
+            width: 200px;
+            flex-shrink: 0;
+            background: rgba(52, 73, 94, 0.9);
+            border: 3px solid #5c94fc;
+            border-radius: 8px;
+            padding: 8px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        #sidebar-header {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            color: #fcd444;
+            text-align: center;
+            padding: 8px 4px;
+            border-bottom: 2px solid #5c94fc;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-aircraft {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            border-left: 3px solid #54fc54;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-aircraft:hover {
+            background: rgba(92, 148, 252, 0.3);
+            border-left-color: #fcd444;
+        }
+
+        .sidebar-aircraft.selected {
+            background: rgba(252, 212, 68, 0.3);
+            border-left-color: #fcd444;
+            border-left-width: 5px;
+        }
+
+        .sidebar-aircraft.selected .sidebar-callsign {
+            color: #fcd444;
+        }
+
+        .sidebar-callsign {
+            display: block;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 9px;
+            color: #fcfcfc;
+            margin-bottom: 2px;
+        }
+
+        .sidebar-info {
+            display: block;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #b4d4ec;
+        }
+
+        .sidebar-empty {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            color: #888;
+            text-align: center;
+            padding: 20px 8px;
+        }
+
+        #stats {
+            text-align: center;
+            padding: 8px;
+            font-size: clamp(11px, 2.5vw, 15px);
+            color: #fcfcfc;
+            text-shadow: 1px 1px 0px #000;
+            font-weight: bold;
+            flex-shrink: 0;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #stats span {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 2px solid #5c94fc;
+            white-space: nowrap;
+        }
+
+        #weather-info {
+            text-align: center;
+            padding: 6px;
+            font-size: clamp(10px, 2.2vw, 14px);
+            color: #fcfcfc;
+            text-shadow: 1px 1px 0px #000;
+            font-weight: bold;
+            flex-shrink: 0;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        #weather-info span {
+            background: rgba(52, 73, 94, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 2px solid #5c94fc;
+            white-space: nowrap;
+        }
+
+        #datetime-display {
+            color: #b4d4ec;
+        }
+
+        #weather-display {
+            color: #fcd444;
+        }
+
+        #sun-times {
+            color: #fc9c54;
+        }
+
+        #connection-status {
+            color: #54fc54;
+        }
+
+        #aircraft-count {
+            color: #fcd444;
+        }
+
+        #range-display {
+            color: #fc9c54;
+        }
+
+        .blink {
+            animation: blink 1s linear infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0.3; }
+        }
+
+        /* View direction controls */
+        .view-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 80px;
+            background: rgba(52, 73, 94, 0.8);
+            border: 3px solid #5c94fc;
+            border-radius: 8px;
+            color: #fcd444;
+            font-size: 28px;
+            font-family: 'Press Start 2P', monospace;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            z-index: 10;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .view-arrow:hover {
+            background: rgba(92, 148, 252, 0.6);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .view-arrow:active {
+            background: rgba(92, 148, 252, 0.9);
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        #view-left {
+            left: 15px;
+        }
+
+        #view-right {
+            right: 15px;
+        }
+
+        #compass-direction {
+            color: #54fc54;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* Mobile responsive - move sidebar below viewer */
+        @media (max-width: 768px) {
+            #main-content {
+                flex-direction: column;
+                padding: 5px;
+                gap: 5px;
+            }
+
+            #aircraft-sidebar {
+                width: 100%;
+                max-height: 150px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                display: flex;
+                align-content: flex-start;
+                padding: 5px;
+            }
+
+            #sidebar-header {
+                width: 100%;
+                padding: 5px;
+                margin-bottom: 5px;
+                font-size: 9px;
+            }
+
+            .sidebar-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                width: 100%;
+                overflow-y: auto;
+                max-height: 100px;
+            }
+
+            .sidebar-aircraft {
+                flex: 0 0 auto;
+                padding: 4px 8px;
+                margin-bottom: 0;
+                white-space: nowrap;
+            }
+
+            .sidebar-callsign {
+                font-size: 8px;
+                display: inline;
+                margin-right: 5px;
+            }
+
+            .sidebar-info {
+                font-size: 9px;
+                display: inline;
+            }
+
+            .sidebar-empty {
+                width: 100%;
+                padding: 10px;
+            }
+
+            #stats {
+                padding: 4px;
+                gap: 4px;
+            }
+
+            #stats span {
+                padding: 3px 6px;
+                font-size: 10px;
+            }
+
+            #weather-info {
+                padding: 4px;
+                gap: 4px;
+            }
+
+            #weather-info span {
+                padding: 3px 6px;
+                font-size: 9px;
+            }
+
+            .view-arrow {
+                width: 40px;
+                height: 60px;
+                font-size: 20px;
+            }
+
+            #view-left {
+                left: 5px;
+            }
+
+            #view-right {
+                right: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        ★ <span id="site-title">ADS-Bit</span> ★
+    </div>
+    <div id="main-content">
+        <div id="canvas-container">
+            <button id="view-left" class="view-arrow">◄</button>
+            <canvas id="pixel-canvas" width="800" height="600"></canvas>
+            <button id="view-right" class="view-arrow">►</button>
+        </div>
+        <div id="aircraft-sidebar">
+            <div id="sidebar-header">AIRCRAFT IN VIEW</div>
+            <div class="sidebar-list"></div>
+        </div>
+    </div>
+    <div id="stats">
+        <span id="connection-status" class="blink">CONNECTING...</span>
+        <span id="compass-direction">VIEWING: NORTH</span>
+        <span id="aircraft-count">AIRCRAFT: 0</span>
+        <span id="range-display">RANGE: 0 NM</span>
+    </div>
+    <div id="weather-info">
+        <span id="datetime-display">Loading...</span>
+        <span id="weather-display">--°F</span>
+        <span id="sun-times">☀ --:-- / 🌙 --:--</span>
+    </div>
+
+    <script src="pixel-view.js?v=47"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADS-Bit Setup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/setup/setup.css">
+</head>
+<body>
+    <div class="setup-container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-steps">
+            <span class="step-dot active" data-step="0"></span>
+            <span class="step-dot" data-step="1"></span>
+            <span class="step-dot" data-step="2"></span>
+            <span class="step-dot" data-step="3"></span>
+            <span class="step-dot" data-step="4"></span>
+            <span class="step-dot" data-step="5"></span>
+        </div>
+
+        <!-- Step 0: Welcome -->
+        <div class="step active" id="step-0">
+            <div class="step-icon">&#9733;</div>
+            <h1 class="retro-title">Welcome to ADS-Bit</h1>
+            <p class="step-desc">Your retro SNES-style ADS-B flight tracker. Let's get everything configured so you can start watching aircraft.</p>
+            <p class="step-desc">This wizard will guide you through:</p>
+            <ul class="feature-list">
+                <li>Setting an admin password</li>
+                <li>Configuring your location</li>
+                <li>Finding ADS-B receivers</li>
+                <li>Choosing your theme</li>
+            </ul>
+            <button class="btn btn-primary btn-large" onclick="wizard.next()">LET'S GET STARTED</button>
+        </div>
+
+        <!-- Step 1: Password -->
+        <div class="step" id="step-1">
+            <h2 class="step-title">Set Admin Password</h2>
+            <p class="step-desc">Protect your admin panel with a password. You'll use this to change settings later.</p>
+            <div class="form-group">
+                <label>Password (min 4 characters)</label>
+                <input type="password" id="setup-password" placeholder="Enter password" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="setup-password-confirm" placeholder="Confirm password" autocomplete="new-password">
+            </div>
+            <div id="password-error" class="error-msg hidden"></div>
+            <div class="step-buttons">
+                <button class="btn" onclick="wizard.prev()">BACK</button>
+                <button class="btn btn-primary" onclick="wizard.savePassword()">NEXT</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Location -->
+        <div class="step" id="step-2">
+            <h2 class="step-title">Your Location</h2>
+            <p class="step-desc">This is used for weather data, sunrise/sunset times, and positioning aircraft relative to you.</p>
+            <div class="form-group">
+                <label>Location Name</label>
+                <input type="text" id="setup-location-name" placeholder="e.g. Denver, CO">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Latitude</label>
+                    <input type="number" id="setup-lat" step="0.0001" placeholder="39.7392">
+                </div>
+                <div class="form-group">
+                    <label>Longitude</label>
+                    <input type="number" id="setup-lon" step="0.0001" placeholder="-104.9903">
+                </div>
+            </div>
+            <button class="btn btn-detect" id="detect-location-btn" onclick="wizard.detectLocation()">USE BROWSER LOCATION</button>
+            <div id="location-status" class="status-msg hidden"></div>
+            <div class="step-buttons">
+                <button class="btn" onclick="wizard.prev()">BACK</button>
+                <button class="btn btn-primary" onclick="wizard.saveLocation()">NEXT</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Receivers -->
+        <div class="step" id="step-3">
+            <h2 class="step-title">Find Receivers</h2>
+            <p class="step-desc">ADS-Bit connects to ADS-B receivers on your network (port 30003 by default). You can auto-scan or enter IPs manually.</p>
+            <div class="form-group">
+                <label>Discovery Mode</label>
+                <select id="setup-receiver-mode" onchange="wizard.toggleReceiverMode()">
+                    <option value="AUTO">AUTO - Scan network automatically</option>
+                    <option value="MANUAL">MANUAL - Enter IP addresses</option>
+                </select>
+            </div>
+            <div id="setup-manual-group" class="form-group hidden">
+                <label>Receiver IPs (one per line)</label>
+                <textarea id="setup-receiver-ips" rows="3" placeholder="192.168.1.100"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Receiver Port</label>
+                <input type="number" id="setup-receiver-port" value="30003" min="1" max="65535">
+            </div>
+            <button class="btn btn-detect" id="scan-btn" onclick="wizard.scanReceivers()">SCAN FOR RECEIVERS</button>
+            <div id="scan-status" class="status-msg hidden"></div>
+            <div class="step-buttons">
+                <button class="btn" onclick="wizard.prev()">BACK</button>
+                <button class="btn btn-primary" onclick="wizard.saveReceivers()">NEXT</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Theme & Preferences -->
+        <div class="step" id="step-4">
+            <h2 class="step-title">Theme & Preferences</h2>
+            <p class="step-desc">Customize how ADS-Bit looks and feels.</p>
+            <div class="form-group">
+                <label>Background Theme</label>
+                <select id="setup-theme"></select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Site Title</label>
+                    <input type="text" id="setup-site-title" placeholder="ADS-Bit" value="ADS-Bit">
+                </div>
+                <div class="form-group">
+                    <label>Temperature Unit</label>
+                    <select id="setup-temp-unit">
+                        <option value="F">Fahrenheit (F)</option>
+                        <option value="C">Celsius (C)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="step-buttons">
+                <button class="btn" onclick="wizard.prev()">BACK</button>
+                <button class="btn btn-primary" onclick="wizard.saveTheme()">NEXT</button>
+            </div>
+        </div>
+
+        <!-- Step 5: Complete -->
+        <div class="step" id="step-5">
+            <div class="step-icon">&#9733;</div>
+            <h2 class="step-title">Setup Complete!</h2>
+            <p class="step-desc">Everything is configured and ready to go. Here's a summary:</p>
+            <div class="summary-box" id="setup-summary"></div>
+            <p class="step-desc">You can change any of these settings later in the admin panel.</p>
+            <button class="btn btn-primary btn-large" onclick="wizard.finish()">LAUNCH ADS-BIT</button>
+        </div>
+    </div>
+
+    <script src="/setup/setup.js"></script>
+</body>
+</html>

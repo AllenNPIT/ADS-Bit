@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADS-Bit Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h1 class="retro-title">ADS-Bit Admin</h1>
+            <p class="login-subtitle">Enter admin password</p>
+            <form id="login-form">
+                <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required>
+                <button type="submit" class="btn btn-primary">LOGIN</button>
+            </form>
+            <div id="login-error" class="error-msg hidden"></div>
+            <a href="/" class="back-link">Back to Viewer</a>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="hidden">
+        <header class="admin-header">
+            <h1 class="retro-title">ADS-Bit Admin</h1>
+            <div class="header-actions">
+                <a href="/" class="btn btn-small">VIEWER</a>
+                <button id="logout-btn" class="btn btn-small btn-danger">LOGOUT</button>
+            </div>
+        </header>
+
+        <nav class="tab-bar">
+            <button class="tab active" data-tab="dashboard">DASHBOARD</button>
+            <button class="tab" data-tab="receivers">RECEIVERS</button>
+            <button class="tab" data-tab="location">LOCATION</button>
+            <button class="tab" data-tab="display">DISPLAY</button>
+            <button class="tab" data-tab="tuning">TUNING</button>
+            <button class="tab" data-tab="security">SECURITY</button>
+        </nav>
+
+        <main class="tab-content">
+            <!-- Dashboard Tab -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <h2>Live Status</h2>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <span class="status-label">ACTIVE FLIGHTS</span>
+                        <span id="stat-flights" class="status-value">--</span>
+                    </div>
+                    <div class="status-card">
+                        <span class="status-label">CONNECTED VIEWERS</span>
+                        <span id="stat-viewers" class="status-value">--</span>
+                    </div>
+                    <div class="status-card">
+                        <span class="status-label">RECEIVERS</span>
+                        <span id="stat-receivers" class="status-value">--</span>
+                    </div>
+                    <div class="status-card">
+                        <span class="status-label">UPTIME</span>
+                        <span id="stat-uptime" class="status-value">--</span>
+                    </div>
+                </div>
+                <div id="receiver-list" class="info-box">
+                    <h3>Connected Receivers</h3>
+                    <div id="receiver-ips">Loading...</div>
+                </div>
+            </section>
+
+            <!-- Receivers Tab -->
+            <section id="tab-receivers" class="tab-pane hidden">
+                <h2>Receiver Configuration</h2>
+                <div class="form-group">
+                    <label>Discovery Mode</label>
+                    <select id="receiver-mode">
+                        <option value="AUTO">AUTO (scan network)</option>
+                        <option value="MANUAL">MANUAL (specify IPs)</option>
+                    </select>
+                </div>
+                <div id="manual-ips-group" class="form-group hidden">
+                    <label>Receiver IPs (one per line)</label>
+                    <textarea id="receiver-ips-input" rows="4" placeholder="192.168.1.100&#10;192.168.1.101"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Receiver Port</label>
+                    <input type="number" id="receiver-port" value="30003" min="1" max="65535">
+                </div>
+                <div class="button-row">
+                    <button id="scan-receivers-btn" class="btn">SCAN NOW</button>
+                    <button id="restart-receivers-btn" class="btn">RESTART CONNECTIONS</button>
+                    <button id="save-receivers-btn" class="btn btn-primary">SAVE</button>
+                </div>
+                <div id="scan-results" class="info-box hidden">
+                    <h3>Scan Results</h3>
+                    <div id="scan-results-list"></div>
+                </div>
+            </section>
+
+            <!-- Location Tab -->
+            <section id="tab-location" class="tab-pane hidden">
+                <h2>Location Settings</h2>
+                <div class="form-group">
+                    <label>Location Name</label>
+                    <input type="text" id="location-name" placeholder="My Location">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Latitude</label>
+                        <input type="number" id="location-lat" step="0.0001" placeholder="0.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude</label>
+                        <input type="number" id="location-lon" step="0.0001" placeholder="0.0">
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button id="browser-location-btn" class="btn">USE BROWSER LOCATION</button>
+                    <button id="save-location-btn" class="btn btn-primary">SAVE</button>
+                </div>
+            </section>
+
+            <!-- Display Tab -->
+            <section id="tab-display" class="tab-pane hidden">
+                <h2>Display Settings</h2>
+                <div class="form-group">
+                    <label>Theme</label>
+                    <select id="theme-select"></select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Site Title</label>
+                        <input type="text" id="site-title" placeholder="ADS-Bit">
+                    </div>
+                    <div class="form-group">
+                        <label>Subtitle</label>
+                        <input type="text" id="site-subtitle" placeholder="Retro Flight Tracker">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Temperature Unit</label>
+                    <select id="temp-unit">
+                        <option value="F">Fahrenheit (F)</option>
+                        <option value="C">Celsius (C)</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="show-weather" checked> Show Weather
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="show-sidebar" checked> Show Sidebar
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Default View Direction</label>
+                    <select id="default-direction">
+                        <option value="0">North</option>
+                        <option value="90">East</option>
+                        <option value="180">South</option>
+                        <option value="270">West</option>
+                    </select>
+                </div>
+                <div class="button-row">
+                    <button id="save-display-btn" class="btn btn-primary">SAVE</button>
+                </div>
+            </section>
+
+            <!-- Tuning Tab -->
+            <section id="tab-tuning" class="tab-pane hidden">
+                <h2>Performance Tuning</h2>
+                <div class="form-group">
+                    <label>Flight Timeout (seconds)</label>
+                    <input type="number" id="flight-timeout" min="10" max="600" value="60">
+                    <span class="hint">Remove flights not seen in this many seconds</span>
+                </div>
+                <div class="form-group">
+                    <label>Broadcast Interval (seconds)</label>
+                    <input type="number" id="broadcast-interval" min="1" max="30" value="1">
+                    <span class="hint">How often to push updates to viewers</span>
+                </div>
+                <div class="form-group">
+                    <label>Cleanup Interval (seconds)</label>
+                    <input type="number" id="cleanup-interval" min="5" max="120" value="10">
+                    <span class="hint">How often to check for stale flights</span>
+                </div>
+                <div class="form-group">
+                    <label>Receiver Reconnect Delay (seconds)</label>
+                    <input type="number" id="reconnect-delay" min="1" max="60" value="5">
+                    <span class="hint">Wait time before reconnecting to a lost receiver</span>
+                </div>
+                <div class="button-row">
+                    <button id="save-tuning-btn" class="btn btn-primary">SAVE</button>
+                </div>
+            </section>
+
+            <!-- Security Tab -->
+            <section id="tab-security" class="tab-pane hidden">
+                <h2>Change Admin Password</h2>
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="current-password" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="new-password" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Password</label>
+                    <input type="password" id="confirm-password" autocomplete="new-password">
+                </div>
+                <div class="button-row">
+                    <button id="change-password-btn" class="btn btn-primary">CHANGE PASSWORD</button>
+                </div>
+            </section>
+        </main>
+
+        <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <script src="/admin/admin.js"></script>
+</body>
+</html>
