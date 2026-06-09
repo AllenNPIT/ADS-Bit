@@ -901,6 +901,53 @@ body.pe-open { overflow: hidden; }
 
 .pe-readout span { color: #54fc54; }
 
+/* Sidebar: opacity, palettes, reference */
+.pe-opacity-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.pe-opacity-group input[type="range"] { width: 100%; accent-color: #fcd444; }
+
+.pe-subhead {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #b4d4ec;
+    margin-top: 4px;
+    letter-spacing: 1px;
+}
+
+.pe-mini-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 6px 4px;
+    border: 2px solid #5c94fc;
+    border-radius: 5px;
+    background: rgba(92, 148, 252, 0.15);
+    color: #fcfcfc;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+}
+.pe-mini-btn:hover { background: rgba(92, 148, 252, 0.4); }
+
+#pe-custom-palette:empty::after,
+#pe-recent-palette:empty::after {
+    content: '—';
+    color: #555;
+    font-size: 11px;
+}
+
+.pe-ref-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.pe-ref-row { display: flex; gap: 6px; }
+.pe-ref-row .pe-mini-btn { flex: 1; }
+.pe-ref-load { display: inline-block; }
+.pe-ref-controls input[type="range"] { width: 100%; accent-color: #fcd444; }
+
 /* Sprite card EDIT button uses primary accent */
 .sprite-edit-btn { border-color: #fcd444; color: #fcd444; }
 .sprite-edit-btn:hover { background: rgba(252, 212, 68, 0.3); }
