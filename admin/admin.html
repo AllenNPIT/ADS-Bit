@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/admin/admin.css">
+    <link rel="stylesheet" href="/admin/admin.css?v=20260609b">
 </head>
 <body>
     <!-- Login Screen -->
@@ -76,37 +76,69 @@
             <!-- Receivers Tab -->
             <section id="tab-receivers" class="tab-pane hidden">
                 <h2>Receiver Configuration</h2>
-                <div id="network-info-box" class="info-box">
-                    <h3>Host Network</h3>
-                    <div id="network-info">Loading...</div>
+
+                <!-- Live status of the receivers the app is currently using -->
+                <div id="receiver-status-box" class="info-box">
+                    <h3>Active Receivers <span id="receiver-status-summary" class="rx-summary"></span></h3>
+                    <div id="receiver-status-list">Loading...</div>
+                    <div class="button-row">
+                        <button id="test-receivers-btn" class="btn">TEST CONNECTIONS</button>
+                        <button id="restart-receivers-btn" class="btn">RESTART CONNECTIONS</button>
+                    </div>
+                    <p class="hint">🟢 receiving data &nbsp; 🟡 connected, no data yet &nbsp; 🔴 unreachable</p>
                 </div>
+
+                <!-- Step 1: choose how receivers are selected -->
+                <div class="rx-section-label">1. Select Receivers</div>
                 <div class="form-group">
                     <label>Discovery Mode</label>
                     <select id="receiver-mode">
-                        <option value="AUTO">AUTO (scan network)</option>
-                        <option value="MANUAL">MANUAL (specify IPs)</option>
+                        <option value="AUTO">AUTO (use all receivers found on the network)</option>
+                        <option value="MANUAL">MANUAL (use only the IPs I specify)</option>
                     </select>
                 </div>
                 <div id="manual-ips-group" class="form-group hidden">
                     <label>Receiver IPs (one per line)</label>
                     <textarea id="receiver-ips-input" rows="4" placeholder="192.168.1.100&#10;192.168.1.101"></textarea>
+                    <span class="hint">The app connects to every IP listed here.</span>
                 </div>
                 <div class="form-group">
                     <label>Receiver Port</label>
                     <input type="number" id="receiver-port" value="30003" min="1" max="65535">
                 </div>
+
+                <!-- Step 2: save + apply -->
+                <div class="rx-section-label">2. Save &amp; Apply</div>
+                <div class="button-row">
+                    <button id="save-receivers-btn" class="btn btn-primary">SAVE &amp; APPLY</button>
+                </div>
+                <p class="hint">Saves your selection, reconnects immediately, then re-tests the receivers below.</p>
+
+                <!-- Find receivers on the network -->
+                <div class="rx-section-label">Find Receivers on Network</div>
                 <div class="form-group">
-                    <label>Custom Subnet (optional)</label>
-                    <input type="text" id="scan-subnet" placeholder="e.g. 10.0.0.0/24 (leave empty to scan all local subnets)">
+                    <label>Interface / Subnet to Scan</label>
+                    <select id="scan-interface"></select>
+                    <span class="hint">Pick a network interface to scan, or scan all local subnets.</span>
+                </div>
+                <div class="form-group">
+                    <label>Custom Subnet (optional override)</label>
+                    <input type="text" id="scan-subnet" placeholder="e.g. 10.0.0.0/24 — overrides the selection above">
                 </div>
                 <div class="button-row">
                     <button id="scan-receivers-btn" class="btn">SCAN NOW</button>
-                    <button id="restart-receivers-btn" class="btn">RESTART CONNECTIONS</button>
-                    <button id="save-receivers-btn" class="btn btn-primary">SAVE</button>
                 </div>
                 <div id="scan-results" class="info-box hidden">
                     <h3>Scan Results</h3>
                     <div id="scan-results-list"></div>
+                    <div class="button-row" id="scan-use-row" style="display:none">
+                        <button id="use-selected-btn" class="btn btn-primary">USE SELECTED RECEIVERS</button>
+                    </div>
+                </div>
+
+                <div id="network-info-box" class="info-box">
+                    <h3>Host Network</h3>
+                    <div id="network-info">Loading...</div>
                 </div>
             </section>
 
@@ -265,6 +297,7 @@
         <div id="toast" class="toast hidden"></div>
     </div>
 
-    <script src="/admin/admin.js"></script>
+    <script src="/admin/pixel-editor.js?v=20260609b"></script>
+    <script src="/admin/admin.js?v=20260609b"></script>
 </body>
 </html>

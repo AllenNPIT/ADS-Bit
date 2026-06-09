@@ -170,6 +170,69 @@ receivers: List[str] = []
 receiver_tasks: List[asyncio.Task] = []
 emitter_categories: Dict[str, str] = {}  # ICAO hex -> ADS-B emitter category (A1, A3, A7, etc.)
 
+# Live per-receiver connection health, keyed by IP. Each entry:
+#   {"state": "connecting"|"connected"|"down", "last_msg": ts|None,
+#    "msg_count": int, "connected_since": ts|None, "error": str}
+receiver_status: Dict[str, dict] = {}
+
+# A receiver is considered "receiving" if it produced a message this recently.
+RECEIVER_DATA_FRESH_SECONDS = 30
+
+
+def reset_receiver_status(ips):
+    """Replace the tracked receiver set, marking each as connecting."""
+    global receiver_status
+    receiver_status = {
+        ip: {"state": "connecting", "last_msg": None,
+             "msg_count": 0, "connected_since": None, "error": ""}
+        for ip in ips
+    }
+
+
+def describe_receiver(ip, reachable=None):
+    """Build a display-friendly status object for one receiver.
+
+    state -> (label, color):
+      down/missing       -> DOWN (red)
+      connecting         -> CONNECTING (gray)
+      connected + data   -> RECEIVING (green)
+      connected, no data -> NO DATA (yellow)  (socket up; maybe no aircraft in range)
+    reachable: optional active port-probe result that overrides a stale state.
+    """
+    st = receiver_status.get(ip)
+    now = time.time()
+    if st is None:
+        state, last_age, msg_count = "down", None, 0
+    else:
+        state = st["state"]
+        last_age = (now - st["last_msg"]) if st["last_msg"] else None
+        msg_count = st["msg_count"]
+
+    # An active probe result is authoritative about reachability.
+    if reachable is False:
+        state = "down"
+    elif reachable is True and state == "down":
+        state = "connected"
+
+    if state == "down":
+        label, color = "DOWN", "red"
+    elif state == "connecting":
+        label, color = "CONNECTING", "gray"
+    elif last_age is not None and last_age <= RECEIVER_DATA_FRESH_SECONDS:
+        label, color = "RECEIVING", "green"
+    else:
+        label, color = "NO DATA", "yellow"
+
+    return {
+        "ip": ip,
+        "state": state,
+        "label": label,
+        "color": color,
+        "msg_count": msg_count,
+        "last_msg_age": round(last_age, 1) if last_age is not None else None,
+        "reachable": reachable,
+    }
+
 
 @dataclass
 class SBSMessage:
@@ -246,10 +309,17 @@ async def connect_to_receiver(host: str, port: int = 30003):
     """Connect to an SBS receiver and process messages"""
     reconnect_delay = config['tuning']['receiver_reconnect_seconds']
     print(f"Connecting to receiver at {host}:{port}...")
+    # Ensure a status entry exists even if this task started outside a reset.
+    receiver_status.setdefault(host, {"state": "connecting", "last_msg": None,
+                                       "msg_count": 0, "connected_since": None, "error": ""})
     while True:
         try:
+            receiver_status[host]["state"] = "connecting"
             reader, writer = await asyncio.open_connection(host, port)
             print(f"Connected to {host}:{port}")
+            receiver_status[host]["state"] = "connected"
+            receiver_status[host]["connected_since"] = time.time()
+            receiver_status[host]["error"] = ""
 
             while True:
                 line = await reader.readline()
@@ -259,6 +329,8 @@ async def connect_to_receiver(host: str, port: int = 30003):
                 line = line.decode('utf-8', errors='ignore')
                 msg = parse_sbs_message(line)
                 if msg and msg.icao:
+                    receiver_status[host]["last_msg"] = time.time()
+                    receiver_status[host]["msg_count"] += 1
                     if msg.icao not in flights:
                         flights[msg.icao] = {
                             'icao': msg.icao,
@@ -295,10 +367,14 @@ async def connect_to_receiver(host: str, port: int = 30003):
                     flight['ground'] = msg.ground
                     flight['last_seen'] = time.time()
 
+            # readline returned empty -> peer closed the connection.
+            receiver_status[host]["state"] = "down"
             writer.close()
             await writer.wait_closed()
         except Exception as e:
             print(f"Receiver {host}:{port} error: {e}")
+            receiver_status[host]["state"] = "down"
+            receiver_status[host]["error"] = str(e)
             await asyncio.sleep(reconnect_delay)
 
 
@@ -992,10 +1068,15 @@ async def restart_receiver_connections():
     """Cancel existing receiver tasks and start new ones."""
     global receivers, receiver_tasks
 
-    # Cancel old tasks
-    for task in receiver_tasks:
-        task.cancel()
+    # Cancel old tasks and let them unwind cleanly. Awaiting the cancelled
+    # tasks here (with return_exceptions) absorbs their CancelledError so it
+    # can never propagate into the main event loop.
+    old_tasks = list(receiver_tasks)
     receiver_tasks.clear()
+    for task in old_tasks:
+        task.cancel()
+    if old_tasks:
+        await asyncio.gather(*old_tasks, return_exceptions=True)
 
     # Determine receivers
     receiver_config = config["receivers"]
@@ -1015,6 +1096,9 @@ async def restart_receiver_connections():
         print(f"Error determining receivers: {e}")
         receivers = []
 
+    # Reset health tracking to the new receiver set.
+    reset_receiver_status(receivers)
+
     # Start new tasks
     for r in receivers:
         task = asyncio.create_task(connect_to_receiver(r, receiver_port))
@@ -1028,6 +1112,28 @@ async def handle_admin_restart_receivers(request):
     """POST /api/admin/restart-receivers - Restart all receiver connections."""
     await restart_receiver_connections()
     return web.json_response({"ok": True, "receivers": receivers})
+
+
+@require_auth
+async def handle_admin_receiver_status(request):
+    """GET /api/admin/receiver-status - Live health of configured receivers."""
+    statuses = [describe_receiver(ip) for ip in receivers]
+    return web.json_response({
+        "receivers": statuses,
+        "configured": config["receivers"],   # "AUTO" or a list of IPs
+        "count": len(receivers),
+    })
+
+
+@require_auth
+async def handle_admin_test_receivers(request):
+    """POST /api/admin/test-receivers - Actively probe each configured receiver
+    and report reachability combined with live data-flow state."""
+    port = config["receiver_port"]
+    probes = await asyncio.gather(*[test_port(ip, port) for ip in receivers])
+    statuses = [describe_receiver(ip, reachable=reachable)
+                for ip, reachable in zip(receivers, probes)]
+    return web.json_response({"receivers": statuses, "count": len(receivers)})
 
 
 # ---------------------------------------------------------------------------
@@ -1103,6 +1209,8 @@ async def start_http_server():
     app.router.add_get('/api/admin/network-info', handle_admin_network_info)
     app.router.add_post('/api/admin/scan-receivers', handle_admin_scan_receivers)
     app.router.add_post('/api/admin/restart-receivers', handle_admin_restart_receivers)
+    app.router.add_get('/api/admin/receiver-status', handle_admin_receiver_status)
+    app.router.add_post('/api/admin/test-receivers', handle_admin_test_receivers)
     app.router.add_get('/api/admin/sprites', handle_admin_sprites)
     app.router.add_post('/api/admin/sprites/{type}', handle_admin_sprite_upload)
 
@@ -1148,6 +1256,8 @@ async def main():
     else:
         print(f"Using {len(receivers)} receiver(s)")
 
+    reset_receiver_status(receivers)
+
     # Start all tasks
     tasks = [
         start_http_server(),
@@ -1156,12 +1266,15 @@ async def main():
         poll_aircraft_json(),
     ]
 
-    # Connect to all receivers
+    # Connect to all receivers. These run as independent background tasks and
+    # are deliberately NOT awaited in the gather below: restarting receivers
+    # cancels them, and a cancelled task inside the main gather would tear down
+    # the whole server. They still run as long as the event loop is alive.
     for receiver in receivers:
         task = asyncio.ensure_future(connect_to_receiver(receiver, receiver_port))
         receiver_tasks.append(task)
-        tasks.append(task)
 
+    # Only the core services keep the server alive.
     await asyncio.gather(*tasks)
 
 
