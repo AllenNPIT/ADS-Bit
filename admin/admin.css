@@ -593,6 +593,99 @@ textarea {
 }
 
 /* ===================================================================
+   Receivers tab — status indicators & selectable scan results
+   =================================================================== */
+.rx-section-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #fcd444;
+    margin: 22px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(92, 148, 252, 0.3);
+}
+
+.rx-summary {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #b4d4ec;
+}
+
+#receiver-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rx-status-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(92, 148, 252, 0.4);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    flex-wrap: wrap;
+}
+
+.rx-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+}
+.rx-dot.green  { background: #54fc54; color: #54fc54; }
+.rx-dot.yellow { background: #fcd444; color: #fcd444; }
+.rx-dot.red    { background: #fc5454; color: #fc5454; }
+.rx-dot.gray   { background: #888;    color: #888; box-shadow: none; }
+
+.rx-ip {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #fcfcfc;
+    min-width: 110px;
+}
+
+.rx-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+}
+.rx-green  { color: #54fc54; }
+.rx-yellow { color: #fcd444; }
+.rx-red    { color: #fc5454; }
+.rx-gray   { color: #888; }
+
+.rx-detail {
+    color: #b4d4ec;
+    font-size: 11px;
+    margin-left: auto;
+}
+
+.rx-scan-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 4px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(92, 148, 252, 0.2);
+}
+
+.rx-scan-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #fcd444;
+    cursor: pointer;
+}
+
+.rx-scan-ip {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #fcfcfc;
+}
+
+/* ===================================================================
    Pixel Editor
    =================================================================== */
 .pe-overlay {
