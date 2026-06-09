@@ -78,6 +78,12 @@
                 themesManagerLoaded = true;
                 loadThemeManager();
             }
+            // Live receiver health polling only while the Receivers tab is open
+            if (tab.dataset.tab === 'receivers') {
+                startReceiverStatusPolling();
+            } else {
+                stopReceiverStatusPolling();
+            }
         });
     });
 
@@ -191,9 +197,42 @@
             });
             html += '</table>';
             el.innerHTML = html;
+
+            populateScanInterfaces(ifaces);
         } catch (e) {
             el.textContent = 'Error loading network info';
         }
+    }
+
+    // Build the "Interface / Subnet to Scan" dropdown from the host interfaces.
+    // Subnets larger than /20 (>4094 hosts) are disabled — the server rejects
+    // them anyway, and scanning e.g. a docker /16 is impractically slow.
+    const MAX_SCAN_HOSTS = 4094;
+    function populateScanInterfaces(ifaces) {
+        const sel = document.getElementById('scan-interface');
+        if (!sel) return;
+        sel.innerHTML = '';
+
+        const allOpt = document.createElement('option');
+        allOpt.value = '';
+        allOpt.textContent = 'All local subnets (slower)';
+        sel.appendChild(allOpt);
+
+        let firstScannable = null;
+        ifaces.forEach(i => {
+            const prefix = parseInt((i.network.split('/')[1]) || '0', 10);
+            const hosts = Math.max(0, Math.pow(2, 32 - prefix) - 2);
+            const opt = document.createElement('option');
+            opt.value = i.network;
+            const tooBig = hosts > MAX_SCAN_HOSTS;
+            opt.textContent = `${i.name} — ${i.network} (${hosts} hosts)` + (tooBig ? ' — too large' : '');
+            opt.disabled = tooBig;
+            sel.appendChild(opt);
+            if (!tooBig && firstScannable === null) firstScannable = i.network;
+        });
+
+        // Default to the first reasonably-sized interface for a fast scan.
+        if (firstScannable !== null) sel.value = firstScannable;
     }
 
     // ------- Receivers -------
@@ -210,7 +249,10 @@
         btn.textContent = 'SCANNING...';
         btn.disabled = true;
         try {
-            const subnet = (document.getElementById('scan-subnet').value || '').trim();
+            // Custom subnet text overrides the interface dropdown selection.
+            const custom = (document.getElementById('scan-subnet').value || '').trim();
+            const iface = document.getElementById('scan-interface').value || '';
+            const subnet = custom || iface;
             const fetchOpts = { method: 'POST' };
             if (subnet) {
                 fetchOpts.headers = { 'Content-Type': 'application/json' };
@@ -218,16 +260,7 @@
             }
             const res = await fetch('/api/admin/scan-receivers', fetchOpts);
             const data = await res.json();
-            const box = document.getElementById('scan-results');
-            const list = document.getElementById('scan-results-list');
-            box.classList.remove('hidden');
-            if (data.error) {
-                list.textContent = data.error;
-            } else if (data.receivers && data.receivers.length) {
-                list.textContent = data.receivers.join(', ');
-            } else {
-                list.textContent = 'No receivers found on network';
-            }
+            renderScanResults(data);
         } catch (e) {
             toast('Scan failed', true);
         }
@@ -235,17 +268,77 @@
         btn.disabled = false;
     });
 
+    // Render scan results as a selectable checklist.
+    function renderScanResults(data) {
+        const box = document.getElementById('scan-results');
+        const list = document.getElementById('scan-results-list');
+        const useRow = document.getElementById('scan-use-row');
+        box.classList.remove('hidden');
+        list.innerHTML = '';
+
+        if (data.error) {
+            list.textContent = data.error;
+            useRow.style.display = 'none';
+            return;
+        }
+        const found = data.receivers || [];
+        if (!found.length) {
+            list.textContent = 'No receivers found on network';
+            useRow.style.display = 'none';
+            return;
+        }
+
+        // Pre-check IPs already in the manual list.
+        const current = new Set(document.getElementById('receiver-ips-input').value
+            .split('\n').map(s => s.trim()).filter(Boolean));
+
+        found.forEach(ip => {
+            const row = document.createElement('label');
+            row.className = 'rx-scan-item';
+            row.innerHTML = `
+                <input type="checkbox" value="${ip}" ${current.has(ip) ? 'checked' : ''}>
+                <span class="rx-scan-ip">${ip}</span>`;
+            list.appendChild(row);
+        });
+        useRow.style.display = '';
+    }
+
+    // "USE SELECTED" -> switch to MANUAL, populate IPs, save & apply.
+    document.getElementById('use-selected-btn').addEventListener('click', async () => {
+        const checked = Array.from(
+            document.querySelectorAll('#scan-results-list input[type="checkbox"]:checked')
+        ).map(cb => cb.value);
+        if (!checked.length) { toast('Select at least one receiver', true); return; }
+
+        document.getElementById('receiver-mode').value = 'MANUAL';
+        toggleManualIps('MANUAL');
+        document.getElementById('receiver-ips-input').value = checked.join('\n');
+        await saveAndApplyReceivers();
+    });
+
     document.getElementById('restart-receivers-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('restart-receivers-btn');
+        const orig = btn.textContent;
+        btn.textContent = 'RESTARTING…';
+        btn.disabled = true;
         try {
             const res = await fetch('/api/admin/restart-receivers', { method: 'POST' });
-            if (res.ok) toast('Receivers restarted');
+            if (res.ok) { toast('Receivers restarted'); await testReceivers(); }
             else toast('Failed to restart', true);
         } catch (e) {
             toast('Error restarting receivers', true);
         }
+        btn.textContent = orig;
+        btn.disabled = false;
     });
 
-    document.getElementById('save-receivers-btn').addEventListener('click', async () => {
+    document.getElementById('save-receivers-btn').addEventListener('click', saveAndApplyReceivers);
+
+    // Save the receiver selection, reconnect, then re-test — the full
+    // select -> save -> verify loop in one action.
+    async function saveAndApplyReceivers() {
+        const btn = document.getElementById('save-receivers-btn');
+        const orig = btn.textContent;
         const mode = document.getElementById('receiver-mode').value;
         const port = parseInt(document.getElementById('receiver-port').value) || 30003;
         const body = { receiver_port: port };
@@ -255,11 +348,122 @@
         } else {
             const ips = document.getElementById('receiver-ips-input').value
                 .split('\n').map(s => s.trim()).filter(Boolean);
-            body.receivers = ips.length ? ips : 'AUTO';
+            if (!ips.length) { toast('Enter at least one receiver IP', true); return; }
+            body.receivers = ips;
         }
 
-        await saveConfig(body);
-    });
+        btn.textContent = 'APPLYING…';
+        btn.disabled = true;
+        try {
+            const saved = await saveConfig(body, true);
+            if (saved) {
+                // Apply immediately so the active list reflects the new selection.
+                await fetch('/api/admin/restart-receivers', { method: 'POST' });
+                await testReceivers();
+                toast('Saved & applied — testing connections');
+            }
+        } catch (e) {
+            toast('Failed to apply', true);
+        }
+        btn.textContent = orig;
+        btn.disabled = false;
+    }
+
+    // ------- Receiver status / health -------
+    let receiverStatusInterval = null;
+
+    function startReceiverStatusPolling() {
+        loadReceiverStatus();
+        if (!receiverStatusInterval) {
+            receiverStatusInterval = setInterval(loadReceiverStatus, 4000);
+        }
+    }
+
+    function stopReceiverStatusPolling() {
+        if (receiverStatusInterval) {
+            clearInterval(receiverStatusInterval);
+            receiverStatusInterval = null;
+        }
+    }
+
+    async function loadReceiverStatus() {
+        const list = document.getElementById('receiver-status-list');
+        try {
+            const res = await fetch('/api/admin/receiver-status');
+            if (!res.ok) {
+                // 404 here almost always means the server is running an older
+                // build without this endpoint — tell the user instead of
+                // leaving a silent "Loading…".
+                if (res.status === 404) {
+                    list.innerHTML = '<span class="no-sprite">Status endpoint not found — ' +
+                        'restart the server to load the latest build.</span>';
+                }
+                return;
+            }
+            const data = await res.json();
+            renderReceiverStatus(data.receivers || [], data.configured);
+        } catch (e) {
+            // Only replace the initial placeholder; don't clobber good data on
+            // a transient poll failure.
+            if (/Loading/.test(list.textContent)) {
+                list.innerHTML = '<span class="no-sprite">Could not reach server.</span>';
+            }
+        }
+    }
+
+    document.getElementById('test-receivers-btn').addEventListener('click', testReceivers);
+
+    async function testReceivers() {
+        const btn = document.getElementById('test-receivers-btn');
+        const orig = btn.textContent;
+        btn.textContent = 'TESTING…';
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/admin/test-receivers', { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                renderReceiverStatus(data.receivers || [], undefined, true);
+            } else {
+                toast('Test failed', true);
+            }
+        } catch (e) {
+            toast('Test error', true);
+        }
+        btn.textContent = orig;
+        btn.disabled = false;
+    }
+
+    function renderReceiverStatus(statuses, configured, tested) {
+        const list = document.getElementById('receiver-status-list');
+        const summary = document.getElementById('receiver-status-summary');
+
+        if (configured !== undefined) {
+            const modeLabel = (configured === 'AUTO') ? 'AUTO' : 'MANUAL';
+            summary.textContent = `(${statuses.length} • ${modeLabel})`;
+        }
+
+        if (!statuses.length) {
+            list.innerHTML = '<span class="no-sprite">No receivers configured. ' +
+                'Use AUTO mode or add IPs below, then SAVE &amp; APPLY.</span>';
+            return;
+        }
+
+        list.innerHTML = '';
+        statuses.forEach(s => {
+            const row = document.createElement('div');
+            row.className = 'rx-status-item';
+            const detail = s.last_msg_age != null
+                ? `${s.msg_count} msgs · last ${s.last_msg_age}s ago`
+                : (s.state === 'down' ? (tested ? 'no response on port' : 'not connected')
+                                      : 'waiting for data…');
+            row.innerHTML = `
+                <span class="rx-dot ${s.color}"></span>
+                <span class="rx-ip">${s.ip}</span>
+                <span class="rx-label rx-${s.color}">${s.label}</span>
+                <span class="rx-detail">${detail}</span>`;
+            list.appendChild(row);
+        });
+    }
 
     // ------- Location -------
     document.getElementById('browser-location-btn').addEventListener('click', () => {
@@ -580,7 +784,7 @@
     }
 
     // ------- Helpers -------
-    async function saveConfig(body) {
+    async function saveConfig(body, silent) {
         try {
             const res = await fetch('/api/admin/config', {
                 method: 'PUT',
@@ -588,13 +792,16 @@
                 body: JSON.stringify(body)
             });
             if (res.ok) {
-                toast('Settings saved');
+                if (!silent) toast('Settings saved');
+                return true;
             } else {
                 const data = await res.json();
                 toast(data.error || 'Save failed', true);
+                return false;
             }
         } catch (e) {
             toast('Connection error', true);
+            return false;
         }
     }
 
