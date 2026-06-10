@@ -26,3 +26,6 @@ Thumbs.db
 # Local config — contains the admin password hash and session secret.
 # Fresh installs start from config.json.example (see CONFIG.md).
 config.json
+
+# Docker config volume (holds the live config.json with secrets)
+data/

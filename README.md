@@ -44,14 +44,16 @@ On first run, visit http://localhost:2001 and the setup wizard will guide you th
 ### First Run
 
 ```bash
-# Create a config file (the setup wizard runs if you skip this)
-cp config.json.example config.json
-
-# Build and start
+# Build and start — no config step needed
 docker compose up -d
 ```
 
-The web UI is available at http://localhost:2001.
+A config file is created automatically in `data/` on first run, then the
+browser **setup wizard** walks you through receiver, location, and password
+setup. The web UI is available at http://localhost:2001.
+
+A `/health` endpoint (used by the container healthcheck) reports status,
+version, and receiver/flight counts: `curl http://localhost:2001/health`.
 
 ### Useful Commands
 
@@ -82,11 +84,11 @@ The following paths are bind-mounted from the repo directory and persist across 
 
 | Path | Contents |
 |------|----------|
-| `config.json` | Server configuration and credentials |
+| `data/` | Server configuration and credentials (`config.json`, auto-seeded) |
 | `images/` | Aircraft and UI sprites (including uploads) |
 | `backgrounds/` | Theme background images (including custom themes) |
 
-Host networking (`network_mode: host`) is used so the server can auto-scan your LAN for ADS-B receivers.
+Host networking (`network_mode: host`) is used so the server can auto-scan your LAN for ADS-B receivers. Auto-scan skips oversized subnets (larger than /20, e.g. a Docker bridge `172.17.0.0/16`); if your receiver lives on such a network, set it explicitly via the admin Receivers tab.
 
 ## Requirements
 

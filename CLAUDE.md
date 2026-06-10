@@ -18,6 +18,14 @@ python3 server.py
 
 Access at http://localhost:{web_port} (configured in config.json)
 
+### Deployment / fielding notes
+
+- **Config path** is overridable via the `ADSBIT_CONFIG` env var (defaults to `config.json` beside `server.py`). Docker uses `/app/data/config.json` on a mounted volume.
+- **`/health`** (no auth) returns status/version/receiver/flight counts — used by the Docker `HEALTHCHECK` and any external monitoring.
+- **`VERSION`** constant in `server.py` is the single source of truth; surfaced at startup, via `GET /api/config`, and in the admin header. Bump it for releases.
+- **Auto-scan** (`scan_for_receivers`) skips subnets larger than `MIN_SCAN_PREFIX` (/20) so a docker `/16` doesn't stall startup; the manual scan endpoint enforces the same limit.
+- **`docker-entrypoint.sh`** seeds `config.json` from `config.json.example` on first run, so a fresh `docker compose up` needs no manual steps. SIGTERM/SIGINT shut down cleanly (no traceback).
+
 ## Architecture
 
 ### Components
