@@ -169,6 +169,15 @@ textarea {
     margin: 0;
 }
 
+.admin-version {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #54fc54;
+    text-shadow: none;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
 .header-actions {
     display: flex;
     gap: 8px;

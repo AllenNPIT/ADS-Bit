@@ -23,5 +23,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Local config (uncomment if you want to ignore local changes)
-# config.json
+# Local config — contains the admin password hash and session secret.
+# Fresh installs start from config.json.example (see CONFIG.md).
+config.json
