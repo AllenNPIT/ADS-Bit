@@ -48,11 +48,15 @@ Access at http://localhost:{web_port} (configured in config.json)
 - **admin/** - Admin panel (login + tabbed settings UI)
   - Theme management: rename display names, upload per-direction background PNGs, create new themes
   - Display names stored in `config.json` `theme_names` map (folder name -> display name)
+  - Receivers tab: live per-receiver health (via `GET /api/admin/receiver-status` and `POST /api/admin/test-receivers`), a select → SAVE & APPLY → auto-test flow, selectable scan results, and a per-interface scan selector
+  - Version (from `server.py` `VERSION`) is surfaced via public `GET /api/config` and shown in the admin header
   - **pixel-editor.js** - In-app Canvas2D pixel editor (Sprites tab "EDIT" button)
-    - Edits sprites at native 500x333; tools: pencil, eraser, color picker, fill bucket, pan
-    - Zoom/pan, undo/redo (snapshot-per-stroke), grid overlay, retro palette + native color input
+    - Edits sprites at native 500x333; tools: pencil, eraser, color picker, fill bucket, pan, line, rectangle, ellipse (outline/filled), rectangular select
+    - Select & move: marquee + floating layer, drag/arrow-nudge, Ctrl+C/X/V clipboard, Delete, Enter/Esc commit
+    - Zoom/pan, undo/redo (snapshot-per-stroke), grid overlay, brush size & opacity, retro + custom (localStorage) + recent palettes, adjustable reference-image overlay
     - Exports a 500x333 PNG via `srcCanvas.toBlob` and POSTs to the existing `/api/admin/sprites/{type}` upload endpoint (no new server route)
-    - Keyboard: B/E/I/F tools, Space=pan, +/-/0 zoom, Ctrl+Z/Y undo/redo, G grid, Esc close
+    - Keyboard: B/E/I/F/L/R/O/M tools, Space=pan, +/-/0 zoom, Ctrl+Z/Y undo/redo, Ctrl+C/X/V, arrows nudge, G grid, Esc close
+  - **Asset cache-busting:** `admin.html` references `admin.css`/`admin.js`/`pixel-editor.js` with a `?v=YYYYMMDD[x]` query — bump it whenever those files change so browsers reload them
 
 - **setup/** - First-run setup wizard (multi-step configuration)
 
