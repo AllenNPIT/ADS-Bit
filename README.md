@@ -1,5 +1,11 @@
 # ADS-Bit
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/OWNER/ADS-Bit)](https://github.com/OWNER/ADS-Bit/releases)
+[![CI](https://github.com/OWNER/ADS-Bit/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/ADS-Bit/actions/workflows/ci.yml)
+
+> **Setup note:** replace `OWNER` with your GitHub username/org throughout this README (badges and image names) after creating the repository.
+
 A retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites.
 
 ![ADS-Bit Screenshot](screenshots/screenshot.png)
@@ -41,7 +47,21 @@ On first run, visit http://localhost:2001 and the setup wizard will guide you th
 
 - [Docker](https://docs.docker.com/get-docker/) with Compose V2, **or** [Podman](https://podman.io/) with `podman-compose`
 
-### First Run
+### Run the prebuilt image (no clone needed)
+
+Once a release is published, a multi-arch image (amd64 + arm64, e.g. Raspberry Pi)
+is available from GitHub Container Registry:
+
+```bash
+docker run -d --name ads-bit --network host --restart unless-stopped \
+  -e ADSBIT_CONFIG=/app/data/config.json \
+  -v "$PWD/data:/app/data" \
+  ghcr.io/OWNER/ads-bit:latest
+```
+
+Then open http://localhost:2001 and complete the setup wizard.
+
+### Build from source
 
 ```bash
 # Build and start — no config step needed
@@ -92,7 +112,7 @@ Host networking (`network_mode: host`) is used so the server can auto-scan your 
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.9–3.11 (3.12+ may require build tools for `netifaces`; the Docker image uses 3.11)
 - ADS-B receiver providing SBS/BaseStation format on port 30003 (dump1090, readsb, etc.)
 - Modern web browser with Canvas support
 
