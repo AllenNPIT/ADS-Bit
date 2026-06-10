@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-06-10
+
+First release with a published container image and security tooling. No
+application behavior changes from 1.1.1.
+
+### Added
+- Prebuilt multi-arch (amd64 + arm64) container image published to GitHub
+  Container Registry: `ghcr.io/allennpit/ads-bit`.
+- CodeQL code-scanning workflow (Python + JavaScript) and Dependabot updates
+  for GitHub Actions and pip.
+- `workflow_dispatch` trigger on the release workflow for manual image builds.
+
 ## [1.1.1] - 2026-06-10
 
 ### Added
@@ -43,6 +55,7 @@ on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
   pixel-art sprites, directional backgrounds, weather, sun/moon, admin panel,
   first-run setup wizard, and Docker/Podman support.
 
+[1.1.2]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.1.2
 [1.1.1]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.1.1
 [1.1.0]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.1.0
 [1.0]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.0
