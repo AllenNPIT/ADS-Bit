@@ -6,9 +6,11 @@ services:
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+      - ADSBIT_CONFIG=/app/data/config.json
     volumes:
-      # Persist config (copy config.json.example to config.json before first run)
-      - ./config.json:/app/config.json
+      # Config persists here; auto-seeded from config.json.example on first run
+      # (a directory mount, so a fresh `docker compose up` just works).
+      - ./data:/app/data
       # Persist custom sprite uploads
       - ./images:/app/images
       # Persist custom theme backgrounds

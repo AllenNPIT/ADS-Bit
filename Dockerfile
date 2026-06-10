@@ -13,9 +13,16 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . .
+RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 2001
 
-ENV PYTHONUNBUFFERED=1
+# Persist config on a mounted volume by default (see docker-compose.yml).
+ENV PYTHONUNBUFFERED=1 \
+    ADSBIT_CONFIG=/app/data/config.json
 
-CMD ["python3", "server.py"]
+# Liveness probe against the unauthenticated /health endpoint.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python3 -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:2001/health',timeout=4).status==200 else 1)" || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
