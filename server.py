@@ -17,10 +17,16 @@ from aiohttp import web, ClientSession, ClientTimeout
 import netifaces
 import bcrypt
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 WEB_DIR = Path(__file__).parent
-CONFIG_FILE = WEB_DIR / "config.json"
+# Config path is overridable (handy for containers persisting config on a
+# named volume); defaults to config.json next to this script for bare-metal.
+CONFIG_FILE = Path(os.environ.get("ADSBIT_CONFIG") or (WEB_DIR / "config.json"))
+
+# Smallest subnet prefix (largest network) we'll auto-scan: /20 = 4094 hosts.
+# Anything bigger (e.g. a docker /16) is skipped to keep scans fast and safe.
+MIN_SCAN_PREFIX = 20
 
 # Track server start time
 SERVER_START_TIME = time.time()
@@ -414,6 +420,15 @@ async def scan_for_receivers():
                 if ip and netmask and not ip.startswith('127.'):
                     try:
                         network = ipaddress.IPv4Network(f"{ip}/{netmask}", strict=False)
+                        # Skip subnets too large to scan quickly (e.g. a docker
+                        # bridge /16 = 65k hosts). Without this, AUTO discovery
+                        # hammers the network and stalls startup on any host with
+                        # Docker or a large/16. Use MANUAL or a custom subnet for
+                        # receivers that live on such networks.
+                        if network.prefixlen < MIN_SCAN_PREFIX:
+                            print(f"Skipping {network} on {iface}: too large "
+                                  f"({network.num_addresses} hosts) for auto-scan")
+                            continue
                         found.extend(await _scan_subnet(network, port))
                     except ValueError as e:
                         print(f"Invalid network {ip}/{netmask}: {e}")
@@ -984,9 +999,10 @@ async def handle_admin_scan_receivers(request):
             return web.json_response(
                 {"error": f"Invalid subnet: {subnet}"}, status=400)
 
-        if network.prefixlen < 20:
+        if network.prefixlen < MIN_SCAN_PREFIX:
             return web.json_response(
-                {"error": "Subnet too large (max /20 = 4096 hosts)"}, status=400)
+                {"error": f"Subnet too large (max /{MIN_SCAN_PREFIX} = "
+                          f"{2 ** (32 - MIN_SCAN_PREFIX) - 2} hosts)"}, status=400)
 
         port = config['receiver_port']
         found = await _scan_subnet(network, port)
@@ -1172,6 +1188,17 @@ async def handle_http(request):
     return web.Response(status=404, text="Not Found")
 
 
+async def handle_health(request):
+    """GET /health - liveness/readiness probe (no auth, no secrets)."""
+    return web.json_response({
+        "status": "ok",
+        "version": VERSION,
+        "receivers": len(receivers),
+        "flights": len(flights),
+        "uptime_seconds": int(time.time() - SERVER_START_TIME),
+    })
+
+
 # ---------------------------------------------------------------------------
 # Application setup
 # ---------------------------------------------------------------------------
@@ -1184,6 +1211,7 @@ async def start_http_server():
     app.router.add_get('/ws', websocket_handler)
 
     # Public API
+    app.router.add_get('/health', handle_health)
     app.router.add_get('/api/receiver-location', handle_receiver_location)
     app.router.add_get('/api/config', handle_config)
 
@@ -1282,4 +1310,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Make SIGTERM (docker stop, systemctl stop) raise KeyboardInterrupt like
+    # SIGINT does, so shutdown is clean and quiet instead of a stack trace.
+    import signal
+    signal.signal(signal.SIGTERM, signal.default_int_handler)
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("ADS-Bit server shutting down.")
