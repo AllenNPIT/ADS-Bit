@@ -7,14 +7,16 @@ A retro SNES-style side-view flight tracker that displays ADS-B aircraft data wi
 ## Features
 
 - Real-time aircraft tracking via ADS-B receivers
-- Custom pixel art sprites for 6 aircraft types (small prop, regional jet, narrow body, wide body, heavy, helicopter)
+- Custom pixel art sprites for 9 aircraft types (small prop, regional jet, narrow body, wide body, heavy, helicopter, balloon, glider, UAV)
 - Animated sun and moon with accurate astronomical positions
 - Dynamic sky colors based on time of day
 - Weather visualization with cloud sprites
 - Directional view (N/E/S/W) with themed backgrounds
-- Auto-discovery of ADS-B receivers on your network
+- Auto-discovery of ADS-B receivers on your network, with per-interface scanning
 - Canvas-based 10 FPS retro rendering
 - Admin panel with password authentication
+- **In-app pixel editor** — draw and edit sprites in the browser (pencil, shapes, fill, select & move, reference overlay, custom palettes)
+- **Receiver health dashboard** — live per-receiver status (receiving / no data / unreachable), connection testing, and select → save → apply flow
 - First-run setup wizard
 
 ## Quick Start

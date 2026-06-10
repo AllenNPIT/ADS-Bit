@@ -28,8 +28,20 @@
         loadConfig();
         loadThemes();
         loadNetworkInfo();
+        loadVersion();
         refreshStatus();
         statusInterval = setInterval(refreshStatus, 5000);
+    }
+
+    async function loadVersion() {
+        try {
+            const res = await fetch('/api/config');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.version) {
+                document.getElementById('admin-version').textContent = 'v' + data.version;
+            }
+        } catch (e) { /* ignore */ }
     }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
