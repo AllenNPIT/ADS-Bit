@@ -1,10 +1,8 @@
 # ADS-Bit
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/OWNER/ADS-Bit)](https://github.com/OWNER/ADS-Bit/releases)
-[![CI](https://github.com/OWNER/ADS-Bit/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/ADS-Bit/actions/workflows/ci.yml)
-
-> **Setup note:** replace `OWNER` with your GitHub username/org throughout this README (badges and image names) after creating the repository.
+[![Release](https://img.shields.io/github/v/release/AllenNPIT/ADS-Bit)](https://github.com/AllenNPIT/ADS-Bit/releases)
+[![CI](https://github.com/AllenNPIT/ADS-Bit/actions/workflows/ci.yml/badge.svg)](https://github.com/AllenNPIT/ADS-Bit/actions/workflows/ci.yml)
 
 A retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites.
 
@@ -56,7 +54,7 @@ is available from GitHub Container Registry:
 docker run -d --name ads-bit --network host --restart unless-stopped \
   -e ADSBIT_CONFIG=/app/data/config.json \
   -v "$PWD/data:/app/data" \
-  ghcr.io/OWNER/ads-bit:latest
+  ghcr.io/allennpit/ads-bit:latest
 ```
 
 Then open http://localhost:2001 and complete the setup wizard.

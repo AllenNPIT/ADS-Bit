@@ -43,6 +43,6 @@ on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
   pixel-art sprites, directional backgrounds, weather, sun/moon, admin panel,
   first-run setup wizard, and Docker/Podman support.
 
-[1.1.1]: https://github.com/OWNER/ADS-Bit/releases/tag/v1.1.1
-[1.1.0]: https://github.com/OWNER/ADS-Bit/releases/tag/v1.1.0
-[1.0]: https://github.com/OWNER/ADS-Bit/releases/tag/v1.0
+[1.1.1]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.1.1
+[1.1.0]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.1.0
+[1.0]: https://github.com/AllenNPIT/ADS-Bit/releases/tag/v1.0
