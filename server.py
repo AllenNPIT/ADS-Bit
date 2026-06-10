@@ -17,7 +17,7 @@ from aiohttp import web, ClientSession, ClientTimeout
 import netifaces
 import bcrypt
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 WEB_DIR = Path(__file__).parent
 # Config path is overridable (handy for containers persisting config on a
