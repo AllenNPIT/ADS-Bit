@@ -17,6 +17,8 @@ from aiohttp import web, ClientSession, ClientTimeout
 import netifaces
 import bcrypt
 
+VERSION = "1.1.0"
+
 WEB_DIR = Path(__file__).parent
 CONFIG_FILE = WEB_DIR / "config.json"
 
@@ -549,6 +551,7 @@ async def handle_receiver_location(request):
 async def handle_config(request):
     """Return client-relevant configuration (public, no secrets)."""
     return web.json_response({
+        "version": VERSION,
         "theme": config.get("theme", "desert"),
         "location": config["location"],
         "receivers": receivers,
@@ -1231,7 +1234,7 @@ async def main():
     """Main entry point"""
     global receivers, receiver_tasks
 
-    print("ADS-Bit Server Starting...")
+    print(f"ADS-Bit Server v{VERSION} Starting...")
 
     load_config()
 
