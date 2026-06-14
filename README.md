@@ -6,7 +6,19 @@
 
 A retro SNES-style side-view flight tracker that displays ADS-B aircraft data with custom pixel art sprites.
 
-![ADS-Bit Screenshot](screenshots/screenshot.png)
+## Screenshots
+
+### Live viewer
+
+Real-time ADS-B traffic rendered as pixel-art sprites over a directional background — here the East view, with the Las Vegas skyline on the horizon. Aircraft are labelled with callsign, altitude, and distance, and listed in the sidebar sorted by range.
+
+![Live viewer with aircraft in view](screenshots/viewer.png)
+
+### In-app pixel editor
+
+Draw and edit aircraft sprites directly in the browser: pencil, eraser, line/rectangle/ellipse shapes, fill bucket, select & move, zoom/pan, undo/redo, custom palettes, and an adjustable reference overlay. Saving uploads the sprite back to the running tracker — no external tools needed.
+
+![In-browser pixel sprite editor](screenshots/pixel-editor.png)
 
 ## Features
 
