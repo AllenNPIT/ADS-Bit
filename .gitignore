@@ -17,8 +17,9 @@ __pycache__/
 .claude/
 CLAUDE.md
 
-# Gitea token
-.gitea-token
+# Local secrets / tokens
+*.token
+.git-credentials
 
 # OS
 .DS_Store

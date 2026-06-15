@@ -39,7 +39,7 @@ Draw and edit aircraft sprites directly in the browser: pencil, eraser, line/rec
 
 ```bash
 # Clone the repository
-git clone https://gitea.chops.one/allen/ADS-Bit.git
+git clone https://github.com/AllenNPIT/ADS-Bit.git
 cd ADS-Bit
 
 # Install dependencies
