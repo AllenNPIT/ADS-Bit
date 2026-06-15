@@ -1,0 +1,14 @@
+# Pre-commit hooks for ADS-Bit.
+#
+# Setup (once):
+#   pip install pre-commit
+#   pre-commit install
+#
+# Thereafter gitleaks scans every commit for secrets (tokens, keys,
+# password hashes) before they can reach gitea or the public GitHub mirror.
+# Run manually across the whole tree with:  pre-commit run --all-files
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks

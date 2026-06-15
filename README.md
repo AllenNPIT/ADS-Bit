@@ -10,7 +10,7 @@ A retro SNES-style side-view flight tracker that displays ADS-B aircraft data wi
 
 ### Live viewer
 
-Real-time ADS-B traffic rendered as pixel-art sprites over a directional background — here the East view, with the Las Vegas skyline on the horizon. Aircraft are labelled with callsign, altitude, and distance, and listed in the sidebar sorted by range.
+Real-time ADS-B traffic rendered as pixel-art sprites over a directional background — here the East view, with a desert skyline on the horizon. Aircraft are labelled with callsign, altitude, and distance, and listed in the sidebar sorted by range.
 
 ![Live viewer with aircraft in view](screenshots/viewer.png)
 
